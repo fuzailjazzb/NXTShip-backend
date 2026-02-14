@@ -14,6 +14,10 @@ app.use(express.json());
 app.use("/api/admin", adminRoutes);
 app.use("/api/shipment", shipmentRoutes); // ✅ Added
 
+app.get("/", (req, res) => {
+  res.send("Welcome to the Shipment Management API ,, Backend is live!");
+});
+
 app.use((req, res) => {
   res.status(404).send("Route Not Found: " + req.originalUrl);
 });
