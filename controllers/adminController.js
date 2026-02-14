@@ -1,53 +1,37 @@
-const Admin = require("../models/admin");
 const jwt = require("jsonwebtoken");
 
-// ✅ Generate Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
-};
-
-
-// ✅ Admin Login
 exports.loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find admin
-    const admin = await Admin.findOne({ email });
-
-    if (!admin) {
+    // ✅ Only One Admin Allowed (ENV)
+    if (
+      email !== process.env.ADMIN_EMAIL ||
+      password !== process.env.ADMIN_PASSWORD
+    ) {
       return res.status(401).json({
         success: false,
-        message: "Invalid Email or Password",
+        message: "Invalid Admin Credentials ❌"
       });
     }
 
-    // Match password
-    const isMatch = await admin.matchPassword(password);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Email or Password",
-      });
-    }
+    // ✅ JWT Token Generate
+    const token = jwt.sign(
+      { email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.json({
       success: true,
-      message: "Admin Login Successful",
-      token: generateToken(admin._id),
-      admin: {
-        id: admin._id,
-        email: admin.email,
-      },
+      message: "Admin Login Successful ✅",
+      token
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Login Failed",
-      error: error.message,
+      error: error.message
     });
   }
 };
