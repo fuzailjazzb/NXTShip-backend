@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+
 exports.loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
