@@ -64,28 +64,34 @@ exports.bookShipment = async (req, res) => {
           order: shipmentData.orderId,
           payment_mode: shipmentData.paymentMode,
 
+          cod_amount:
+            shipmentData.paymentMode === "COD"
+              ? product.orderValue
+              : 0,
+
           total_amount: product.orderValue,
           quantity: product.quantity || 1,
           weight: product.weight || 0.5,
         },
       ],
 
+      // ✅ MUST BE STRING
       pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
     };
 
-    // ✅ Convert to x-www-form-urlencoded
+
     const body = new URLSearchParams();
     body.append("format", "json");
     body.append("data", JSON.stringify(delhiveryPayload));
 
-    // ✅ Call Delhivery API
-    const response = await axios.post(url, body.toString(), {
+    const response = await axios.post(url, body, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
     });
-
+    // ✅ Convert to x-www-form-urlencoded
+   
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
     // ✅ Waybill Extract
