@@ -71,7 +71,10 @@ exports.bookShipment = async (req, res) => {
 
     // ✅ Waybill Extract
     const waybill =
-      response.data?.packages?.[0]?.waybill || "Not Assigned";
+      response.data?.packages?.[0]?.waybill ||
+      response.data?.packages?.waybill ||
+      response.data?.waybill ||
+      null;
 
     // ✅ Update DB
     savedShipment.waybill = waybill;
