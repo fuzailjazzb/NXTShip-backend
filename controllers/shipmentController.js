@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const Shipment = require("../models/Shipment");
+const Shipment = require("../models/shipment");
 const { json } = require("express");
 
 // ✅ BOOK SHIPMENT
