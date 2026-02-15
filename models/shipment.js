@@ -7,6 +7,9 @@ const shipmentSchema = new mongoose.Schema({
   pincode: String,
   city: String,
   state: String,
+  pickupCity: String,
+  deliveryCity: String,
+  weight: Number,
 
   orderId: String,
   paymentMode: String,
@@ -14,13 +17,15 @@ const shipmentSchema = new mongoose.Schema({
   waybill: String,
   status: {
     type: String,
-    default: "Booked"
+    default: "Pending",
   },
 
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+
+ 
 });
 
 module.exports =

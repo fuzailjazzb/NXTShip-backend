@@ -15,5 +15,6 @@ router.get("/track/:waybill", authMiddleware, trackShipment);
 
 //cancel shipment route
 router.post("/cancel/:waybill", authMiddleware, cancelShipment);
+router.post("/cancel/:id", authMiddleware, cancelShipment);
 
 module.exports = router;
