@@ -2,88 +2,103 @@ const axios = require("axios");
 const Shipment = require("../models/shipment");
 
 
-// ✅ BOOK SHIPMENT (DELHIVERY)
+// ✅ BOOK SHIPMENT (DELHIVERY FINAL)
 exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
 
-    // ✅ 1. Prevent Duplicate Order ID
+    // ✅ Extract Correct Fields (Delivery Side)
+    const delivery = shipmentData.delivery;
+    const product = shipmentData.product;
+
+    if (!delivery?.customerName || !delivery?.phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery details missing ❌",
+      });
+    }
+
+    // ✅ Prevent Duplicate Order ID
     const existing = await Shipment.findOne({ orderId: shipmentData.orderId });
 
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: "Order ID already exists ❌ Please use unique Order ID",
+        message: "Order ID already exists ❌ Use unique Order ID",
       });
     }
 
-    // ✅ 2. Save Shipment First (Pending)
+    // ✅ Save Shipment First
     const savedShipment = await Shipment.create({
       orderId: shipmentData.orderId,
-      customerName: shipmentData.customerName,
-      phone: shipmentData.phone,
-      address: shipmentData.address,
-      city: shipmentData.city,
-      state: shipmentData.state,
-      pincode: shipmentData.pincode,
+
+      customerName: delivery.customerName,
+      phone: delivery.phone,
+      address: delivery.address,
+      city: delivery.city,
+      state: delivery.state,
+      pincode: delivery.pincode,
+
       paymentMode: shipmentData.paymentMode,
-      orderValue: shipmentData.orderValue,
-      weight: shipmentData.weight,
+      orderValue: product.orderValue,
+      weight: product.weight,
+
       status: "Pending",
     });
 
-    // ✅ 3. Delhivery API URL
+    // ✅ Delhivery API URL
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ 4. Correct Payload Format (MOST IMPORTANT FIX)
-    const payload = {
-      format: "json",
-      data: {
-        shipments: [
-          {
-            name: shipmentData.customerName,
-            add: shipmentData.address,
-            pin: shipmentData.pincode,
-            city: shipmentData.city,
-            state: shipmentData.state,
-            country: "India",
-            phone: shipmentData.phone,
-            order: shipmentData.orderId,
-            payment_mode: shipmentData.paymentMode,
-            total_amount: shipmentData.orderValue,
-            quantity: shipmentData.quantity || 1,
-            weight: shipmentData.weight || 0.5,
-          },
-        ],
-        pickup_location:
-          process.env.PICKUP_LOCATION || "KING NXT",
-      },
-    };
-          
+    // ✅ Correct Delhivery Payload (Form Encoded)
+    const delhiveryPayload = {
+      shipments: [
+        {
+          name: delivery.customerName,
+          add: delivery.address,
+          pin: delivery.pincode,
+          city: delivery.city,
+          state: delivery.state,
+          country: "India",
+          phone: delivery.phone,
 
-    // ✅ 5. Call Delhivery API
-    const response = await axios.post(url, payload, {
+          order: shipmentData.orderId,
+          payment_mode: shipmentData.paymentMode,
+
+          total_amount: product.orderValue,
+          quantity: product.quantity || 1,
+          weight: product.weight || 0.5,
+        },
+      ],
+
+      pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
+    };
+
+    // ✅ Convert to x-www-form-urlencoded
+    const body = new URLSearchParams();
+    body.append("format", "json");
+    body.append("data", JSON.stringify(delhiveryPayload));
+
+    // ✅ Call Delhivery API
+    const response = await axios.post(url, body.toString(), {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
     });
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ 6. Waybill Extract Safely
+    // ✅ Waybill Extract
     const waybill =
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.waybill ||
-      response.data?.waybill ||
       null;
 
-    // ✅ 7. Update Shipment DB
+    // ✅ Update Shipment
     savedShipment.waybill = waybill;
     savedShipment.status = waybill ? "Booked" : "Failed";
     await savedShipment.save();
 
-    // ✅ 8. Return Response
     return res.json({
       success: true,
       message: waybill
