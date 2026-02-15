@@ -6,113 +6,64 @@ const Shipment = require("../models/shipment");
 exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
-
-    // ✅ Extract Correct Fields (Delivery Side)
     const delivery = shipmentData.delivery;
     const product = shipmentData.product;
 
-    if (!delivery?.customerName || !delivery?.phone) {
-      return res.status(400).json({
-        success: false,
-        message: "Delivery details missing ❌",
-      });
-    }
-
-    // ✅ Prevent Duplicate Order ID
-    const existing = await Shipment.findOne({ orderId: shipmentData.orderId });
-
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Order ID already exists ❌ Use unique Order ID",
-      });
-    }
-
-    // ✅ Save Shipment First
-    const savedShipment = await Shipment.create({
-      orderId: shipmentData.orderId,
-
-      customerName: delivery.customerName,
-      phone: delivery.phone,
-      address: delivery.address,
-      city: delivery.city,
-      state: delivery.state,
-      pincode: delivery.pincode,
-
-      paymentMode: shipmentData.paymentMode,
-      orderValue: product.orderValue,
-      weight: product.weight,
-
-      status: "Pending",
-    });
-
+    // ✅ Delhivery API URL
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    const delhiveryPayload = {
+    // ✅ EXACT payload as documentation
+    const payload = {
+      pickup_location: {
+        name: process.env.PICKUP_LOCATION || "KING NXT",
+      },
+
       shipments: [
         {
+          order: shipmentData.orderId,
+
           name: delivery.customerName,
           add: delivery.address,
-          pin: delivery.pincode,
           city: delivery.city,
           state: delivery.state,
           country: "India",
+          pin: delivery.pincode,
           phone: delivery.phone,
 
-          order: shipmentData.orderId,
           payment_mode: shipmentData.paymentMode,
 
+          total_amount: product.orderValue,
           cod_amount:
             shipmentData.paymentMode === "COD"
               ? product.orderValue
               : 0,
 
-          total_amount: product.orderValue,
-          quantity: product.quantity || 1,
           weight: product.weight || 0.5,
+          quantity: product.quantity || 1,
+
+          products_desc: product.productName || "NXTShip Product",
         },
       ],
-
-      pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
     };
 
-
-    // ✅ IMPORTANT: MUST SEND AS FORM STRING
-    const formBody =
-      "format=json&data=" +
-      encodeURIComponent(JSON.stringify(delhiveryPayload));
-
-
-    // ✅ Delhivery API Call (Correct)
-    const response = await axios.post(url, formBody, {
+    // ✅ Call Delhivery with JSON
+    const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+        "Content-Type": "application/json",
       },
     });
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ Waybill Extract
+    // ✅ Waybill extract
     const waybill =
-      response.data?.packages?.[0]?.waybill ||
-      response.data?.packages?.waybill ||
-      response.data?.waybill ||
-      null;
-
-    // ✅ Update Shipment
-    savedShipment.waybill = waybill;
-    savedShipment.status = waybill ? "Booked" : "Failed";
-    await savedShipment.save();
+      response.data?.packages?.[0]?.waybill || null;
 
     return res.json({
       success: true,
-      message: waybill
-        ? "Shipment Booked Successfully ✅"
-        : "Shipment Created but Waybill Not Assigned ❌",
-
       waybill,
-      shipment: savedShipment,
       delhiveryResponse: response.data,
     });
   } catch (error) {
@@ -125,8 +76,6 @@ exports.bookShipment = async (req, res) => {
     });
   }
 };
-
-
 
 // ✅ GET ALL SHIPMENTS (Dashboard)
 exports.getAllShipments = async (req, res) => {
