@@ -38,65 +38,80 @@ exports.bookShipment = async (req, res) => {
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
     // ✅ Correct Payload Encoding
-    const payload =
-      "format=json&data=" +
-      JSON.stringify({
-        shipments: [
-          {
-            name: shipmentData.customerName,
-            add: shipmentData.address,
-            pin: shipmentData.pincode,
-            city: shipmentData.city,
-            state: shipmentData.state,
-            country: "India",
-            phone: shipmentData.phone,
-            order: shipmentData.orderId,
-            payment_mode: shipmentData.paymentMode,
-          },
-        ],
-        pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
-      });
+    const payload = {
+      pickup_location: "KING NXT",
+
+      shipments: [
+        {
+          name: shipmentData.customerName,
+          add: shipmentData.address,
+          city: shipmentData.city,
+          state: shipmentData.state,
+          country: "India",
+          pin: shipmentData.pincode,
+          phone: shipmentData.phone,
+
+          order: shipmentData.orderId,
+          payment_mode: shipmentData.paymentMode,
+
+          shipment_length: 10,
+          shipment_width: 10,
+          shipment_height: 10,
+          weight: shipmentData.weight || 0.5,
+
+          quantity: shipmentData.quantity || 1,
+          total_amount: shipmentData.orderValue || 500
+        }
+      ]
+    };
 
     // ✅ API Call
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
     });
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ Waybill Extract
-    const waybill =
-      response.data?.packages?.[0]?.waybill ||
-      response.data?.packages?.waybill ||
-      response.data?.waybill ||
-      null;
-
-    // ✅ Update DB
-    savedShipment.waybill = waybill;
-    savedShipment.status = "Booked";
-    await savedShipment.save();
-
-    return res.json({
+    res.json({
       success: true,
       message: "Shipment Booked Successfully ✅",
-      waybill,
-      shipment: savedShipment,
-      delhiveryResponse: response.data,
+      data: response.data,
     });
 
   } catch (error) {
-    console.log("❌ Booking Error:", error.response?.data || error.message);
-
     return res.status(500).json({
       success: false,
       message: "Shipment Booking Failed ❌",
       error: error.response?.data || error.message,
     });
-  }
+  };
+
+
+  // ✅ Waybill Extract
+  const waybill =
+    response.data?.packages?.[0]?.waybill ||
+    response.data?.packages?.waybill ||
+    response.data?.waybill ||
+    null;
+
+  // ✅ Update DB
+  savedShipment.waybill = waybill;
+  savedShipment.status = "Booked";
+  await savedShipment.save();
+
+  return res.json({
+    success: true,
+    message: "Shipment Booked Successfully ✅",
+    waybill,
+    shipment: savedShipment,
+    delhiveryResponse: response.data,
+  });
+
 };
+
 
 
 
