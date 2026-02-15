@@ -22,7 +22,7 @@ const payload =
       },
     ],
     pickup_location: {
-      name: "HQ",
+      name: "KING NXT",
     },
   });
 
@@ -37,7 +37,10 @@ const response = await axios.post(url, payload, {
 
 // ✅ Waybill extraction
 const waybill =
-  response.data?.packages?.[0]?.waybill || "Not Assigned";
+  response.data?.packages?.[0]?.waybill ||
+  response.data?.shipment?.[0]?.waybill ||
+  response.data?.waybill ||
+  "N/A";
 
 // ✅ Save shipment in MongoDB
 const savedShipment = await Shipment.create({
@@ -60,3 +63,5 @@ res.status(500).json({
   error: error.response?.data || error.message,
 });
 } };
+
+console.log("DELHIVERY RESPONSE:", response.data);
