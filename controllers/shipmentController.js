@@ -36,39 +36,36 @@ exports.bookShipment = async (req, res) => {
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
     // ✅ 4. Correct Payload Format (MOST IMPORTANT FIX)
-    const payload =
-      "format=json&data=" +
-      encodeURIComponent(
-        JSON.stringify({
-          shipments: [
-            {
-              name: shipmentData.customerName,
-              add: shipmentData.address,
-              pin: shipmentData.pincode,
-              city: shipmentData.city,
-              state: shipmentData.state,
-              country: "India",
-              phone: shipmentData.phone,
-
-              order: shipmentData.orderId,
-              payment_mode: shipmentData.paymentMode,
-
-              total_amount: shipmentData.orderValue,
-              quantity: shipmentData.quantity || 1,
-              weight: shipmentData.weight || 0.5,
-            },
-          ],
-
-          pickup_location:
-            process.env.PICKUP_LOCATION || "KING NXT",
-        })
-      );
+    const payload = {
+      format: "json",
+      data: {
+        shipments: [
+          {
+            name: shipmentData.customerName,
+            add: shipmentData.address,
+            pin: shipmentData.pincode,
+            city: shipmentData.city,
+            state: shipmentData.state,
+            country: "India",
+            phone: shipmentData.phone,
+            order: shipmentData.orderId,
+            payment_mode: shipmentData.paymentMode,
+            total_amount: shipmentData.orderValue,
+            quantity: shipmentData.quantity || 1,
+            weight: shipmentData.weight || 0.5,
+          },
+        ],
+        pickup_location:
+          process.env.PICKUP_LOCATION || "KING NXT",
+      },
+    };
+          
 
     // ✅ 5. Call Delhivery API
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
     });
 
