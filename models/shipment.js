@@ -1,32 +1,61 @@
 const mongoose = require("mongoose");
 
-const shipmentSchema = new mongoose.Schema({
-  customerName: String,
-  phone: String,
-  address: String,
-  pincode: String,
-  city: String,
-  state: String,
-  pickupCity: String,
-  deliveryCity: String,
-  weight: Number,
+const shipmentSchema = new mongoose.Schema(
+  {
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
 
-  orderId: String,
-  paymentMode: String,
+    paymentMode: {
+      type: String,
+      default: "Prepaid",
+    },
 
-  waybill: String,
-  status: {
-    type: String,
-    default: "Pending",
+    pickup: {
+      name: String,
+      phone: String,
+      address: String,
+      city: String,
+      state: String,
+      pincode: String,
+    },
+
+    delivery: {
+      customerName: String,
+      phone: String,
+      address: String,
+      city: String,
+      state: String,
+      pincode: String,
+    },
+
+    product: {
+      productName: String,
+      quantity: Number,
+      orderValue: Number,
+      weight: Number,
+    },
+
+    seller: {
+      sellerName: String,
+      gst: String,
+    },
+
+    waybill: {
+      type: String,
+      default: null,
+    },
+
+    status: {
+      type: String,
+      default: "Pending",
+    },
+
   },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
- 
-});
+  { timestamps: true }
+);
 
 module.exports =
   mongoose.models.Shipment || mongoose.model("Shipment", shipmentSchema);
