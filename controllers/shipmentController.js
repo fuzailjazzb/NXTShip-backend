@@ -4,143 +4,100 @@ const Shipment = require("../models/shipment");
 const { json } = require("express");
 
 // ✅ BOOK SHIPMENT
-
 exports.bookShipment = async (req, res) => {
-
   try {
-
     const shipmentData = req.body;
 
-    // ✅ Step 1: Save Shipment in MongoDB First
-
-    const savedShipment = await Shipment.create({
-
-      ...shipmentData,
-
-      status: "Pending",
-
+    // ✅ Duplicate Check
+    const existing = await Shipment.findOne({
+      orderId: shipmentData.orderId,
     });
 
-    // ✅ Step 2: Delhivery Payload
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID already exists ❌",
+      });
+    }
 
-    const payload = {
+    // ✅ Save Shipment First
+    const savedShipment = await Shipment.create({
+      ...shipmentData,
+      status: "Booked",
+    });
 
-      shipments: [
+    // ✅ Token Check
+    if (!process.env.ICC_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        message: "Delhivery Token Missing in Backend ENV ❌",
+      });
+    }
 
-        {
-
-          name: shipmentData.customerName,
-
-          add: shipmentData.address,
-
-          pin: shipmentData.pincode,
-
-          city: shipmentData.city,
-
-          state: shipmentData.state,
-
-          country: "India",
-
-          phone: shipmentData.phone,
-
-          order: shipmentData.orderId,
-
-          payment_mode: shipmentData.paymentMode,
-
-          shipment_width: "10",
-
-          shipment_height: "10",
-
-          weight: "1",
-
-          shipping_mode: "Surface",
-
-        },
-
-      ],
-
-      pickup_location: {
-
-        name: process.env.PICKUP_NAME || "KING NXT",
-
-      },
-
-    };
-
-    // ✅ Step 3: Delhivery API Call
-
+    // ✅ Delhivery URL
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    const response = await axios.post(
-      url,
-      `format = json&data=${JSON.stringify(payload)}`,
-      {
-
-        headers: {
-
-          Authorization: `Token${process.env.ICC_TOKEN}`,
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-
+    // ✅ Correct Payload Encoding
+    const payload =
+      "format=json&data=" +
+      JSON.stringify({
+        shipments: [
+          {
+            name: shipmentData.customerName,
+            add: shipmentData.address,
+            pin: shipmentData.pincode,
+            city: shipmentData.city,
+            state: shipmentData.state,
+            country: "India",
+            phone: shipmentData.phone,
+            order: shipmentData.orderId,
+            payment_mode: shipmentData.paymentMode,
+          },
+        ],
+        pickup_location: {
+          name: process.env.PICKUP_NAME || "NXTShip Warehouse",
         },
+      });
 
-}
+    // ✅ API Call
+    const response = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Token ${process.env.ICC_TOKEN}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
 
-    );
+    console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-console.log("✅ DELHIVERY RESPONSE:", response.data);
+    // ✅ Waybill Extract
+    const waybill =
+      response.data?.packages?.[0]?.waybill || "Not Assigned";
 
-// ✅ Step 4: Extract Waybill
+    // ✅ Update DB
+    savedShipment.waybill = waybill;
+    savedShipment.status = "Booked";
+    await savedShipment.save();
 
-const waybill =
-
-  response.data?.packages?.[0]?.waybill ||
-
-  response.data?.waybill ||
-
-  "N/A";
-
-// ✅ Step 5: Update Shipment in MongoDB
-
-savedShipment.waybill = waybill;
-
-savedShipment.status = "Booked";
-
-await savedShipment.save();
-
-// ✅ Final Response
-
-res.json({
-
-  success: true,
-
-  message: "Shipment Booked Successfully ✅",
-
-  waybill,
-
-  shipment: savedShipment,
-
-  delhiveryResponse: response.data,
-
-});
+    return res.json({
+      success: true,
+      message: "Shipment Booked Successfully ✅",
+      waybill,
+      shipment: savedShipment,
+      delhiveryResponse: response.data,
+    });
 
   } catch (error) {
+    console.log("❌ Booking Error:", error.response?.data || error.message);
 
-  console.log("❌ Booking Error:", error.response?.data || error.message);
-
-  res.status(500).json({
-
-    success: false,
-
-    message: "Shipment Booking Failed ❌",
-
-    error: error.response?.data || error.message,
-
-  });
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: "Shipment Booking Failed ❌",
+      error: error.response?.data || error.message,
+    });
+  }
 };
+
+
 
 // ✅ GET ALL SHIPMENTS
 
@@ -192,35 +149,35 @@ exports.trackShipment = async (req, res) => {
 
         Authorization: `Token${process.env.ICC_TOKEN}`,
 
-      Accept: "application/json",
+        Accept: "application/json",
 
       },
 
-});
+    });
 
-res.json({
+    res.json({
 
-  success: true,
+      success: true,
 
-  waybill,
+      waybill,
 
-  tracking: response.data,
+      tracking: response.data,
 
-});
+    });
 
   } catch (error) {
 
-  res.status(500).json({
+    res.status(500).json({
 
-    success: false,
+      success: false,
 
-    message: "Tracking Failed ❌",
+      message: "Tracking Failed ❌",
 
-    error: error.response?.data || error.message,
+      error: error.response?.data || error.message,
 
-  });
+    });
 
-}
+  }
 
 };
 
