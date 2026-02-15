@@ -1,65 +1,62 @@
-const axios = require("axios");
-const Shipment = require("../models/shipment");
+const axios = require("axios"); const Shipment = require("../models/shipment");
 
-const { CreateShipmentOnDelhivery } = require("../services/delhiveryService");
-const shipment = require("../models/shipment");
+exports.bookShipment = async (req, res) => { try { const shipmentData = req.body;
 
-exports.bookShipment = async (req, res) => {
-  try {
-    const shipmentData = req.body;
+const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    const payload = {
-      shipment: [
-        {
-          name: shipmentData.customerName,
-          add: shipmentData.address,
-          pin: shipmentData.pinCode,
-          city: shipmentData.city,
-          state: shipmentData.state,
-          country: "india",
-          phone: shipmentData.phone,
-          order: shipmentData.orderId,
-          payment_mode: shipmentData.paymentMode,
-        },
-      ],
-      pickup_location: {
-        name: "KING NXT",
-      },
-    };
-
-    const response = await axios.post(
-      "https://track.delhivery.com/api/cmu/create/json",
-      payload,
+// ✅ Delhivery expects FORM encoded payload
+const payload =
+  "format=json&data=" +
+  JSON.stringify({
+    shipments: [
       {
-        headers: {
-          Authorization: `Token ${process.env.ICC_TOKEN}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
+        name: shipmentData.customerName,
+        add: shipmentData.address,
+        pin: shipmentData.pincode,
+        city: shipmentData.city,
+        state: shipmentData.state,
+        country: "India",
+        phone: shipmentData.phone,
+        order: shipmentData.orderId,
+        payment_mode: shipmentData.paymentMode,
+      },
+    ],
+    pickup_location: {
+      name: "HQ",
+    },
+  });
 
-    const waybill = response.data?.packages?.[0]?.waybill || "N/A";
+// ✅ Correct API Call
+const response = await axios.post(url, payload, {
+  headers: {
+    Authorization: `Token ${process.env.ICC_TOKEN}`,
+    Accept: "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
+  },
+});
 
-    const savedShipment = await Shipment.create({
-      ...shipmentData,
-      waybill: waybill,
+// ✅ Waybill extraction
+const waybill =
+  response.data?.packages?.[0]?.waybill || "Not Assigned";
 
-    });
+// ✅ Save shipment in MongoDB
+const savedShipment = await Shipment.create({
+  ...shipmentData,
+  waybill,
+});
 
-    res.json({
-      success: true,
-      message: "Shipment Booked Successfully ✅",
-      shipment: savedShipment,
-      delhiveryResponse: response.data,
-    });
-  } catch (error) {
-    console.log("Error:", error.response?.data || error.message);
+res.json({
+  success: true,
+  message: "Shipment Booked Successfully ✅",
+  waybill,
+  shipment: savedShipment,
+  delhiveryResponse: response.data,
+});
+} catch (error) { console.log("🔥 Delhivery ERROR:", error.response?.data || error.message);
 
-    res.status(500).json({
-      success: false,
-      message: "Shipment Booking Failed ❌",
-      error: error.response?.data || error.message,
-    });
-  }
-};
+res.status(500).json({
+  success: false,
+  message: "Shipment Booking Failed ❌",
+  error: error.response?.data || error.message,
+});
+} };
