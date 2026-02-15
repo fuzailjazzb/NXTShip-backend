@@ -2,6 +2,7 @@ const axios = require("axios");
 const Shipment = require("../models/shipment");
 
 const { CreateShipmentOnDelhivery } = require("../services/delhiveryService");
+const shipment = require("../models/shipment");
 
 exports.bookShipment = async (req, res) => {
   try {
@@ -19,6 +20,8 @@ exports.bookShipment = async (req, res) => {
     res.json({
       success: true,
       message: "Shipment Booked Successfully ✅",
+      delhiveryResponse: response.data,
+      shipment: savedShipment,
       shipment: saved,
     });
   } catch (error) {
