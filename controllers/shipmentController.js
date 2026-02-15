@@ -46,10 +46,8 @@ exports.bookShipment = async (req, res) => {
       status: "Pending",
     });
 
-    // ✅ Delhivery API URL
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ Correct Delhivery Payload (Form Encoded)
     const delhiveryPayload = {
       shipments: [
         {
@@ -75,23 +73,24 @@ exports.bookShipment = async (req, res) => {
         },
       ],
 
-      // ✅ MUST BE STRING
       pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
     };
 
 
-    const body = new URLSearchParams();
-    body.append("format", "json");
-    body.append("data", JSON.stringify(delhiveryPayload));
+    // ✅ IMPORTANT: MUST SEND AS FORM STRING
+    const formBody =
+      "format=json&data=" +
+      encodeURIComponent(JSON.stringify(delhiveryPayload));
 
-    const response = await axios.post(url, body, {
+
+    // ✅ Delhivery API Call (Correct)
+    const response = await axios.post(url, formBody, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
     });
-    // ✅ Convert to x-www-form-urlencoded
-   
+
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
     // ✅ Waybill Extract
