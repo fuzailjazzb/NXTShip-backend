@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const { response } = require("express");
 
 exports.bookShipment = async (req, res) => {
   try {
@@ -78,3 +79,91 @@ exports.bookShipment = async (req, res) => {
   }
 };
 
+// Fetch all shipments API 
+
+exports.getAllShipments = async (req, res) => {
+  try {
+    const shipments = await Shipment.find().sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      total: shipments.length,
+      shipments,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch shipments",
+      error: error.message,
+    });
+  }
+};
+
+// Track shipment API
+
+exports.trackShipment = async (req, res) => {
+  try {
+    const waybill = req.params.waybill;
+
+    const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${waybill}`;
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Token ${process.env.ICC_TOKEN}`,
+        Accept: "application/json",
+      },
+      timeout: 20000,
+    });
+    
+    res.json({
+      success: true,
+      tracking: response.data,
+    });
+
+  } catch (error) {
+    response.status(500).json({
+      success: false,
+      message: "Failed to track shipment",
+      error: error.response?.data || error.message,
+    });
+
+    
+    console.log("🔥 Delhivery Tracking ERROR:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to track shipment",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+// Cancel shipment API
+
+exports.cancelShipment = async (req, res) => {
+  try {
+    const waybill = req.params.waybill;
+
+    const url = `https://track.delhivery.com/api/cmu/cancel.json?waybill=${waybill}`;
+    const response = await axios.post(url, null, {
+      headers: {
+        Authorization: `Token ${process.env.ICC_TOKEN}`,
+        Accept: "application/json",
+      },
+      timeout: 20000,
+    });
+
+    res.json({
+      success: true,
+      waybill,
+      cancelResponse: response.data,
+    });
+  } catch (error) {
+    console.log("🔥 Delhivery Cancel ERROR:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel shipment",
+      error: error.response?.data || error.message,
+    });
+  }
+};
