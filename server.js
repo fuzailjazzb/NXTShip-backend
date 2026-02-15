@@ -26,6 +26,6 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("Mongo Error:", err));
 
-app.listen(5000, () => {
+app.listen(process.env.PORT || 5000, () => {
   console.log("🚀 Backend Running on Port 5000");
 });
