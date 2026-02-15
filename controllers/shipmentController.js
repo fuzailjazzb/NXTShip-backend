@@ -92,6 +92,7 @@ exports.bookShipment = async (req, res) => {
     const waybill =
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.waybill ||
+      response.data?.waybill ||
       null;
 
     // ✅ Update Shipment
