@@ -8,7 +8,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 router.post("/book", authMiddleware, bookShipment);
 
 // ✅ Fetch All Shipments Route
-router.get("/all", getAllShipments);
+router.get("/all", authMiddleware, getAllShipments);
 
 // Track Shipment Route
 router.get("/track/:waybill", authMiddleware, trackShipment);
