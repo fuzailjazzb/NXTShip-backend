@@ -54,9 +54,7 @@ exports.bookShipment = async (req, res) => {
             payment_mode: shipmentData.paymentMode,
           },
         ],
-        pickup_location: {
-          name: process.env.PICKUP_NAME || "NXTShip Warehouse",
-        },
+        pickup_location: process.env.PICKUP_LOCATION || "KING NXT",
       });
 
     // ✅ API Call
