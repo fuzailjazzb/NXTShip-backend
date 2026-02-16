@@ -53,7 +53,7 @@ exports.bookShipment = async (req, res) => {
       state: shipmentData.state,
       pincode: shipmentData.pincode,
 
-      orderId: document.getElementById("orderId").value,
+      orderId: shipmentData.orderId,
       orderNumber: nextOrderNumber,
       paymentMode: shipmentData.paymentMode,
 
