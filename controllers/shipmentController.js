@@ -105,7 +105,7 @@ exports.bookShipment = async (req, res) => {
             weight: shipmentData.weight || 0.5,
 
             // ✅ MOST IMPORTANT FIX
-            waybill: waybill,
+            
           },
         ],
 
