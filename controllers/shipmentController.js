@@ -88,7 +88,7 @@ exports.bookShipment = async (req, res) => {
             country: "India",
             phone: shipmentData.phone,
 
-            order: newOrderId,
+            order: shipmentData.orderId,
             payment_mode: shipmentData.paymentMode,
 
             // COD जरूरी है
@@ -137,7 +137,7 @@ exports.bookShipment = async (req, res) => {
         : "Shipment Created but Waybill Not Assigned ❌",
 
       waybill,
-      orderId: newOrderId,
+      orderId: shipmentData.orderId,
       shipment: savedShipment,
       delhiveryResponse: response.data,
     });
