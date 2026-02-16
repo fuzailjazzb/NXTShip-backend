@@ -45,8 +45,8 @@ exports.bookShipment = async (req, res) => {
       state: shipmentData.state,
       pincode: shipmentData.pincode,
 
-      orderId: shipmentData.orderId,
-      payment_Mode: shipmentData.paymentMode,
+      order: shipmentData.orderId,
+      paymentMode: shipmentData.paymentMode,
 
       orderValue: shipmentData.orderValue || 0,
       weight: shipmentData.weight || 0.5,
@@ -79,8 +79,8 @@ exports.bookShipment = async (req, res) => {
             country: "India",
             phone: shipmentData.phone,
 
-            orderId: shipmentData.orderId,
-            payment_mode: shipmentData.paymentMode,
+            order: shipmentData.orderId,
+            paymentMode: shipmentData.paymentMode,
 
             // COD जरूरी है
             cod_amount:
