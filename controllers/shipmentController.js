@@ -8,6 +8,13 @@ const Shipment = require("../models/shipment");
  */
 exports.bookShipment = async (req, res) => {
   try {
+
+    const lastShipment = await Shipment.findOne().sort({ orderNumber: -1 });
+    const nextOrderNumber = lastShipment ? lastShipment.orderNumber + 1 : 1;
+
+    const newOrderId = `ORD-${new Date().getFullYear()}-${String(nextOrderNumber).padStart(5, "0")}`;
+
+
     const shipmentData = req.body;
 
     // ✅ 1. Basic Validation
@@ -45,7 +52,8 @@ exports.bookShipment = async (req, res) => {
       state: shipmentData.state,
       pincode: shipmentData.pincode,
 
-      orderId: shipmentData.orderId,
+      orderId: newOrderId,
+      orderNumber: nextOrderNumber,
       paymentMode: shipmentData.paymentMode,
 
       orderValue: shipmentData.orderValue || 0,
@@ -79,7 +87,7 @@ exports.bookShipment = async (req, res) => {
             country: "India",
             phone: shipmentData.phone,
 
-            order: shipmentData.orderId,
+            order: newOrderId,
             payment_mode: shipmentData.paymentMode,
 
             // COD जरूरी है
@@ -128,6 +136,7 @@ exports.bookShipment = async (req, res) => {
         : "Shipment Created but Waybill Not Assigned ❌",
 
       waybill,
+      orderId: newOrderId,
       shipment: savedShipment,
       delhiveryResponse: response.data,
     });

@@ -8,6 +8,11 @@ const shipmentSchema = new mongoose.Schema(
       unique: true,
     },
 
+    orderNumber: {
+      type: Number,
+      unique: true,
+    },
+
     paymentMode: {
       type: String,
       default: "Prepaid",
