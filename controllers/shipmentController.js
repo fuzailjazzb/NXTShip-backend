@@ -10,18 +10,14 @@ const { fetchWaybill } = require("../services/delhiveryService");
 
 exports.bookShipment = async (req, res) => {
   try {
-    // ✅ 1. Frontend Data
     const shipmentData = req.body;
 
-    // ✅ 2. Basic Validation
+    // ✅ Basic Validation
     if (
       !shipmentData.customerName ||
       !shipmentData.phone ||
       !shipmentData.address ||
-      !shipmentData.city ||
-      !shipmentData.state ||
-      !shipmentData.pincode ||
-      !shipmentData.paymentMode
+      !shipmentData.pincode
     ) {
       return res.status(400).json({
         success: false,
@@ -29,7 +25,7 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ 3. Auto Order Number + Order ID
+    // ✅ 1. Generate Order ID (Manual bhi चलेगा)
     const lastShipment = await Shipment.findOne().sort({ orderNumber: -1 });
     const nextOrderNumber = lastShipment ? lastShipment.orderNumber + 1 : 1;
 
@@ -39,7 +35,29 @@ exports.bookShipment = async (req, res) => {
 
     shipmentData.orderId = newOrderId;
 
-    // ✅ 4. Save Shipment in DB (Pending)
+    // ✅ 2. Get Waybill First (MOST IMPORTANT FIX)
+    const waybillRes = await axios.get(
+      "https://track.delhivery.com/waybill/api/bulk/json/?count=1",
+      {
+        headers: {
+          Authorization: `Token ${process.env.ICC_TOKEN}`,
+          Accept: "application/json",
+        },
+      }
+    );
+
+    const waybill = waybillRes.data?.waybills?.[0];
+
+    if (!waybill) {
+      return res.status(500).json({
+        success: false,
+        message: "Waybill Fetch Failed ❌ Delhivery AWB not available",
+      });
+    }
+
+    console.log("✅ Waybill Generated:", waybill);
+
+    // ✅ 3. Save Shipment in DB (Pending)
     const savedShipment = await Shipment.create({
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -58,18 +76,9 @@ exports.bookShipment = async (req, res) => {
       status: "Pending",
     });
 
-    // ✅ 5. Delhivery Token Check
-    if (!process.env.ICC_TOKEN) {
-      return res.status(500).json({
-        success: false,
-        message: "ICC_TOKEN missing in ENV ❌",
-      });
-    }
-
-    // ✅ 6. Delhivery Booking API URL
+    // ✅ 4. Booking Payload (Waybill Included)
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ 7. Proper Payload (Delhivery Mandatory Fields Added)
     const payload =
       "format=json&data=" +
       JSON.stringify({
@@ -92,28 +101,20 @@ exports.bookShipment = async (req, res) => {
                 : 0,
 
             total_amount: shipmentData.orderValue || 0,
+            quantity: 1,
+            weight: shipmentData.weight || 0.5,
 
-            // ✅ Mandatory Extra Fields
-            products_desc: "General Items",
-            quantity: "1",
-
-            shipment_length: "10",
-            shipment_width: "10",
-            shipment_height: "10",
-
-            weight: shipmentData.weight || "0.5",
-
-            shipping_mode: "Surface",
-            address_type: "home",
+            // ✅ MOST IMPORTANT FIX
+            waybill: waybill,
           },
         ],
 
         pickup_location: {
-          name: "KING NXT",
+          name: process.env.PICKUP_LOCATION || "KING NXT",
         },
       });
 
-    // ✅ 8. Call Delhivery API
+    // ✅ 5. Call Delhivery Booking API
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
@@ -123,25 +124,18 @@ exports.bookShipment = async (req, res) => {
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ 9. Extract Waybill
-    const waybill = response.data?.packages?.[0]?.waybill || null;
-
-    // ✅ 10. Update DB Shipment
+    // ✅ 6. Update Shipment with Waybill
     savedShipment.waybill = waybill;
-    savedShipment.status = waybill ? "Booked" : "Failed";
+    savedShipment.status = "Booked";
     await savedShipment.save();
 
-    // ✅ 11. Final Response
+    // ✅ Final Response
     return res.json({
       success: true,
-      message: waybill
-        ? "Shipment Booked Successfully ✅"
-        : "Shipment Created but Waybill Not Assigned ❌",
-
+      message: "Shipment Booked Successfully ✅",
       waybill,
       orderId: shipmentData.orderId,
       shipment: savedShipment,
-      delhiveryResponse: response.data,
     });
   } catch (error) {
     console.log("❌ Booking Error:", error.response?.data || error.message);
@@ -153,7 +147,6 @@ exports.bookShipment = async (req, res) => {
     });
   }
 };
-
 /**
  * ✅ GET ALL SHIPMENTS (Dashboard + View Shipments)
  */
