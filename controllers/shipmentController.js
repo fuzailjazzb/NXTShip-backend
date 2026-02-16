@@ -10,7 +10,9 @@ exports.bookShipment = async (req, res) => {
   try {
 
     const lastShipment = await Shipment.findOne().sort({ orderNumber: -1 });
-    const nextOrderNumber = lastShipment ? lastShipment.orderNumber + 1 : 1;
+
+    const lastNumber = lastShipment?.orderNumber || 0;
+    const nextOrderNumber = Number(lastNumber) + 1;
 
     const newOrderId = `ORD-${new Date().getFullYear()}-${String(nextOrderNumber).padStart(5, "0")}`;
 
