@@ -39,3 +39,24 @@ exports.CreateShipmentOnDelhivery = async (shipmentData) => {
 
     return response.data;
 };
+
+exports.fetchWaybill = async () => {
+    const url = "https://track.delhivery.com/waybill/api/bulk/json/";
+
+    const response = await axios.get(url, {
+        headers: {
+            Authorization: `Token ${process.env.ICC_TOKEN}`,    
+        },
+        params: {
+            count: 1
+        },
+       
+    });
+
+    const waybill = response.data?.waybills?.[0];
+
+    if (!waybill) {
+        throw new Error("No waybill received from Delhivery");
+    }
+    return waybill;
+}

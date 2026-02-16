@@ -6,17 +6,23 @@ const Shipment = require("../models/shipment");
  * Frontend से direct fields आएंगे:
  * customerName, phone, address, city, state, pincode, orderId, paymentMode
  */
+const axios = require("axios");
+const Shipment = require("../models/shipment");
+const { fetchWaybill } = require("../services/delhiveryService");
+
 exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
 
-    // ✅ 1. Basic Validation
+    // ✅ Basic Validation
     if (
       !shipmentData.customerName ||
       !shipmentData.phone ||
       !shipmentData.address ||
+      !shipmentData.city ||
+      !shipmentData.state ||
       !shipmentData.pincode ||
-      !shipmentData.orderId
+      !shipmentData.paymentMode
     ) {
       return res.status(400).json({
         success: false,
@@ -24,19 +30,15 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ 2. Prevent Duplicate Order ID
-    const existing = await Shipment.findOne({
-      orderId: shipmentData.orderId,
-    });
+    // ✅ Generate Order ID (Simple Working)
+    const orderId = "ORD" + Date.now();
+    shipmentData.orderId = orderId;
 
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Order ID already exists ❌ Use unique Order ID",
-      });
-    }
+    // ✅ Step 1: Fetch Waybill FIRST
+    const waybill = await fetchWaybill();
+    console.log("✅ Waybill Assigned:", waybill);
 
-    // ✅ 3. Save Shipment First (Pending)
+    // ✅ Step 2: Save Shipment in DB
     const savedShipment = await Shipment.create({
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -44,31 +46,20 @@ exports.bookShipment = async (req, res) => {
       city: shipmentData.city,
       state: shipmentData.state,
       pincode: shipmentData.pincode,
-
-      order: shipmentData.orderId,
+      orderId: shipmentData.orderId,
       paymentMode: shipmentData.paymentMode,
-
       orderValue: shipmentData.orderValue || 0,
       weight: shipmentData.weight || 0.5,
-
+      waybill: waybill,
       status: "Pending",
     });
 
-    // ✅ 4. Delhivery Token Check
-    if (!process.env.ICC_TOKEN) {
-      return res.status(500).json({
-        success: false,
-        message: "ICC_TOKEN missing in Render ENV ❌",
-      });
-    }
-
-    // ✅ 5. Delhivery Booking API
+    // ✅ Step 3: Delhivery Booking API
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ Delhivery expects x-www-form-urlencoded
-    const payload =
-      "format=json&data=" +
-      JSON.stringify({
+    const payload = {
+      format: "json",
+      data: {
         shipments: [
           {
             name: shipmentData.customerName,
@@ -80,9 +71,8 @@ exports.bookShipment = async (req, res) => {
             phone: shipmentData.phone,
 
             order: shipmentData.orderId,
-            paymentMode: shipmentData.paymentMode,
+            payment_mode: shipmentData.paymentMode,
 
-            // COD जरूरी है
             cod_amount:
               shipmentData.paymentMode === "COD"
                 ? shipmentData.orderValue
@@ -91,43 +81,38 @@ exports.bookShipment = async (req, res) => {
             total_amount: shipmentData.orderValue || 0,
             quantity: 1,
             weight: shipmentData.weight || 0.5,
+
+            // ✅ MOST IMPORTANT
+            waybill: waybill,
           },
         ],
 
         pickup_location: {
-          name: process.env.PICKUP_LOCATION || "KING NXT",
+          name: "KING NXT",
         },
-      });
+      },
+    };
 
-    // ✅ 6. Call Delhivery
+    // ✅ Step 4: Call Delhivery
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+        "Content-Type": "application/json",
       },
     });
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ 7. Extract Waybill Properly
-    const waybill =
-      response.data?.packages?.[0]?.waybill ||
-      response.data?.packages?.waybill ||
-      null;
-
-    // ✅ 8. Update Shipment in DB
-    savedShipment.waybill = waybill;
-    savedShipment.status = waybill ? "Booked" : "Failed";
+    // ✅ Step 5: Update Status
+    savedShipment.status = "Booked";
     await savedShipment.save();
 
-    // ✅ 9. Final Response
     return res.json({
       success: true,
-      message: waybill
-        ? "Shipment Booked Successfully ✅"
-        : "Shipment Created but Waybill Not Assigned ❌",
-
+      message: "Shipment Booked Successfully ✅",
       waybill,
+      orderId: shipmentData.orderId,
       shipment: savedShipment,
       delhiveryResponse: response.data,
     });
