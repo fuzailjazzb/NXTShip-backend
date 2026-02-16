@@ -23,8 +23,7 @@ exports.bookShipment = async (req, res) => {
       !shipmentData.customerName ||
       !shipmentData.phone ||
       !shipmentData.address ||
-      !shipmentData.pincode ||
-      !shipmentData.orderId
+      !shipmentData.pincode 
     ) {
       return res.status(400).json({
         success: false,
