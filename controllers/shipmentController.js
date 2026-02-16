@@ -1,14 +1,13 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const { fetchWaybill } = require("../services/delhiveryService");
 
 /**
  * ✅ BOOK SHIPMENT (DELHIVERY FINAL SIMPLE)
  * Frontend से direct fields आएंगे:
  * customerName, phone, address, city, state, pincode, orderId, paymentMode
  */
-const axios = require("axios");
-const Shipment = require("../models/shipment");
-const { fetchWaybill } = require("../services/delhiveryService");
+
 
 exports.bookShipment = async (req, res) => {
   try {
