@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const shipment = require("../models/shipment");
 
 /**
  * ✅ BOOK SHIPMENT (DELHIVERY FINAL SIMPLE)
@@ -101,6 +102,9 @@ exports.bookShipment = async (req, res) => {
             total_amount: shipmentData.orderValue || 0,
             quantity: 1,
             weight: shipmentData.weight || 0.5,
+              // Custom fields (optional)
+              products_desc: "NXTShip Parcel",
+              shipment_type: "MPS",
           },
         ],
 
