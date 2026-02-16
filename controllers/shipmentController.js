@@ -13,7 +13,7 @@ exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
 
-    // ✅ Basic Validation
+    // ✅ 1. Basic Validation
     if (
       !shipmentData.customerName ||
       !shipmentData.phone ||
@@ -21,6 +21,7 @@ exports.bookShipment = async (req, res) => {
       !shipmentData.city ||
       !shipmentData.state ||
       !shipmentData.pincode ||
+      !shipmentData.orderId ||
       !shipmentData.paymentMode
     ) {
       return res.status(400).json({
@@ -29,15 +30,19 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ Generate Order ID (Simple Working)
-    const orderId = "ORD" + Date.now();
-    shipmentData.orderId = orderId;
+    // ✅ 2. Prevent Duplicate Order ID
+    const existing = await Shipment.findOne({
+      orderId: shipmentData.orderId,
+    });
 
-    // ✅ Step 1: Fetch Waybill FIRST
-    const waybill = await fetchWaybill();
-    console.log("✅ Waybill Assigned:", waybill);
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID already exists ❌ Use new Order ID",
+      });
+    }
 
-    // ✅ Step 2: Save Shipment in DB
+    // ✅ 3. Save Shipment First (Pending)
     const savedShipment = await Shipment.create({
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -45,20 +50,31 @@ exports.bookShipment = async (req, res) => {
       city: shipmentData.city,
       state: shipmentData.state,
       pincode: shipmentData.pincode,
+
       orderId: shipmentData.orderId,
       paymentMode: shipmentData.paymentMode,
+
       orderValue: shipmentData.orderValue || 0,
       weight: shipmentData.weight || 0.5,
-      waybill: waybill,
+
       status: "Pending",
     });
 
-    // ✅ Step 3: Delhivery Booking API
+    // ✅ 4. Delhivery Token Check
+    if (!process.env.ICC_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        message: "ICC_TOKEN missing in ENV ❌",
+      });
+    }
+
+    // ✅ 5. Delhivery Booking API URL
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    const payload = {
-      format: "json",
-      data: {
+    // ✅ 6. Correct Payload (NO WAYBILL FIELD)
+    const payload =
+      "format=json&data=" +
+      JSON.stringify({
         shipments: [
           {
             name: shipmentData.customerName,
@@ -81,39 +97,52 @@ exports.bookShipment = async (req, res) => {
             quantity: 1,
             weight: shipmentData.weight || 0.5,
 
-            // ✅ MOST IMPORTANT
-            waybill: waybill,
+            shipping_mode: "Surface",
           },
         ],
 
         pickup_location: {
-          name: "KING NXT",
+          name: process.env.PICKUP_LOCATION || "KING NXT",
         },
-      },
-    };
+      });
 
-    // ✅ Step 4: Call Delhivery
+    // ✅ 7. Call Delhivery API
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
         Accept: "application/json",
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
     });
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ Step 5: Update Status
+    // ✅ 8. Extract Waybill
+    const waybill = response.data?.packages?.[0]?.waybill || null;
+
+    // ❌ If Delhivery did not assign waybill
+    if (!waybill) {
+      savedShipment.status = "Failed";
+      await savedShipment.save();
+
+      return res.status(500).json({
+        success: false,
+        message: "No waybill received from Delhivery ❌",
+        delhiveryResponse: response.data,
+      });
+    }
+
+    // ✅ 9. Update Shipment in DB
+    savedShipment.waybill = waybill;
     savedShipment.status = "Booked";
     await savedShipment.save();
 
+    // ✅ 10. Success Response
     return res.json({
       success: true,
       message: "Shipment Booked Successfully ✅",
       waybill,
-      orderId: shipmentData.orderId,
       shipment: savedShipment,
-      delhiveryResponse: response.data,
     });
   } catch (error) {
     console.log("❌ Booking Error:", error.response?.data || error.message);
