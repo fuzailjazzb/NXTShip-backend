@@ -200,6 +200,7 @@ exports.cancelShipment = async (req, res) => {
   try {
     const shipmentId = req.params.id;
 
+    // ✅ Step 1: Shipment find करो
     const shipment = await Shipment.findById(shipmentId);
 
     if (!shipment) {
@@ -209,32 +210,61 @@ exports.cancelShipment = async (req, res) => {
       });
     }
 
-    // ✅ Call Delhivery Cancel API
-    if (shipment.waybill) {
-      await axios.post(
-        "https://track.delhivery.com/api/p/edit",
-        `waybill=${shipment.waybill}&cancellation=true`,
-        {
-          headers: {
-            Authorization: `Token ${process.env.ICC_TOKEN}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        }
-      );
+    // ✅ Step 2: Waybill जरूरी है
+    if (!shipment.waybill || shipment.waybill === "Not Assigned") {
+      return res.status(400).json({
+        success: false,
+        message: "Waybill not assigned, cannot cancel ❌",
+      });
     }
 
-    // ✅ Update DB
+    // ✅ Step 3: Delhivery Cancel API URL
+    const url = "https://track.delhivery.com/api/p/edit";
+
+    // ✅ Step 4: Payload (waybill cancel)
+    const body = new URLSearchParams();
+    body.append(
+      "cancellation",
+      JSON.stringify({
+        waybill: shipment.waybill,
+        cancel: true,
+      })
+    );
+
+    // ✅ Step 5: Call Delhivery Cancel API
+    const response = await axios.post(url, body.toString(), {
+      headers: {
+        Authorization: `Token ${process.env.ICC_TOKEN}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    console.log("✅ DELHIVERY CANCEL RESPONSE:", response.data);
+
+    // ✅ Step 6: Check Response
+    if (response.data?.success === false) {
+      return res.status(400).json({
+        success: false,
+        message: "Delhivery Cancel Failed ❌",
+        delhiveryResponse: response.data,
+      });
+    }
+
+    // ✅ Step 7: Update DB Status
     shipment.status = "Cancelled";
     await shipment.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Shipment Cancelled Successfully ✅",
       shipment,
+      delhiveryResponse: response.data,
     });
 
   } catch (error) {
-    res.status(500).json({
+    console.log("❌ Cancel Error:", error.response?.data || error.message);
+
+    return res.status(500).json({
       success: false,
       message: "Cancel Failed ❌",
       error: error.response?.data || error.message,
