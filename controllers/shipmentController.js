@@ -16,6 +16,7 @@ exports.bookShipment = async (req, res) => {
 
 
     const shipmentData = req.body;
+    shipmentData.orderId = newOrderId; // Ensure unique order ID is generated on the server side
 
     // ✅ 1. Basic Validation
     if (
