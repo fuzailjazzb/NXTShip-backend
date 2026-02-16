@@ -209,19 +209,35 @@ exports.cancelShipment = async (req, res) => {
       });
     }
 
+    // ✅ Call Delhivery Cancel API
+    if (shipment.waybill) {
+      await axios.post(
+        "https://track.delhivery.com/api/p/edit",
+        `waybill=${shipment.waybill}&cancellation=true`,
+        {
+          headers: {
+            Authorization: `Token ${process.env.ICC_TOKEN}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      );
+    }
+
+    // ✅ Update DB
     shipment.status = "Cancelled";
     await shipment.save();
 
-    return res.json({
+    res.json({
       success: true,
       message: "Shipment Cancelled Successfully ✅",
       shipment,
     });
+
   } catch (error) {
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "Cancel Failed ❌",
-      error: error.message,
+      error: error.response?.data || error.message,
     });
   }
 };
