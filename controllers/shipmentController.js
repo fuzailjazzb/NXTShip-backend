@@ -1,6 +1,5 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
-const shipment = require("../models/shipment");
 
 /**
  * ✅ BOOK SHIPMENT (DELHIVERY FINAL SIMPLE)
@@ -11,7 +10,7 @@ exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
 
-    // ✅ Basic Validation
+    // ✅ 1. Basic Validation
     if (
       !shipmentData.customerName ||
       !shipmentData.phone ||
@@ -25,7 +24,7 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ Prevent Duplicate Order ID
+    // ✅ 2. Prevent Duplicate Order ID
     const existing = await Shipment.findOne({
       orderId: shipmentData.orderId,
     });
@@ -37,7 +36,7 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ Save Shipment First
+    // ✅ 3. Save Shipment First (Pending)
     const savedShipment = await Shipment.create({
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -55,7 +54,7 @@ exports.bookShipment = async (req, res) => {
       status: "Pending",
     });
 
-    // ✅ Token Check
+    // ✅ 4. Delhivery Token Check
     if (!process.env.ICC_TOKEN) {
       return res.status(500).json({
         success: false,
@@ -63,10 +62,10 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ Delhivery Booking API
+    // ✅ 5. Delhivery Booking API
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ Payload (Old Working Format)
+    // ✅ Delhivery expects x-www-form-urlencoded
     const payload =
       "format=json&data=" +
       JSON.stringify({
@@ -83,6 +82,7 @@ exports.bookShipment = async (req, res) => {
             order: shipmentData.orderId,
             payment_mode: shipmentData.paymentMode,
 
+            // COD जरूरी है
             cod_amount:
               shipmentData.paymentMode === "COD"
                 ? shipmentData.orderValue
@@ -91,19 +91,15 @@ exports.bookShipment = async (req, res) => {
             total_amount: shipmentData.orderValue || 0,
             quantity: 1,
             weight: shipmentData.weight || 0.5,
-
-            // ✅ ये भी add रहने दो (Safe)
-            products_desc: "NXTShip Parcel",
-            shipment_type: "MPS",
           },
         ],
 
         pickup_location: {
-          name: process.env.PICKUP_LOCATION || "KING NXT",
+          name: process.env.PICKUP_NAME || "NXTShip Warehouse",
         },
       });
 
-    // ✅ Call Delhivery
+    // ✅ 6. Call Delhivery
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
@@ -113,17 +109,18 @@ exports.bookShipment = async (req, res) => {
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ Extract Waybill
+    // ✅ 7. Extract Waybill Properly
     const waybill =
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.waybill ||
       null;
 
-    // ✅ Update DB
+    // ✅ 8. Update Shipment in DB
     savedShipment.waybill = waybill;
     savedShipment.status = waybill ? "Booked" : "Failed";
     await savedShipment.save();
 
+    // ✅ 9. Final Response
     return res.json({
       success: true,
       message: waybill
@@ -144,6 +141,7 @@ exports.bookShipment = async (req, res) => {
     });
   }
 };
+
 /**
  * ✅ GET ALL SHIPMENTS (Dashboard + View Shipments)
  */
@@ -202,7 +200,6 @@ exports.cancelShipment = async (req, res) => {
   try {
     const shipmentId = req.params.id;
 
-    // ✅ Step 1: Shipment find करो
     const shipment = await Shipment.findById(shipmentId);
 
     if (!shipment) {
@@ -212,47 +209,6 @@ exports.cancelShipment = async (req, res) => {
       });
     }
 
-    // ✅ Step 2: Waybill जरूरी है
-    if (!shipment.waybill || shipment.waybill === "Not Assigned") {
-      return res.status(400).json({
-        success: false,
-        message: "Waybill not assigned, cannot cancel ❌",
-      });
-    }
-
-    // ✅ Step 3: Delhivery Cancel API URL
-    const url = "https://track.delhivery.com/api/p/edit";
-
-    // ✅ Step 4: Payload (waybill cancel)
-    const body = new URLSearchParams();
-    body.append(
-      "cancellation",
-      JSON.stringify({
-        waybill: shipment.waybill,
-        cancel: true,
-      })
-    );
-
-    // ✅ Step 5: Call Delhivery Cancel API
-    const response = await axios.post(url, body.toString(), {
-      headers: {
-        Authorization: `Token ${process.env.ICC_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-
-    console.log("✅ DELHIVERY CANCEL RESPONSE:", response.data);
-
-    // ✅ Step 6: Check Response
-    if (response.data?.success === false) {
-      return res.status(400).json({
-        success: false,
-        message: "Delhivery Cancel Failed ❌",
-        delhiveryResponse: response.data,
-      });
-    }
-
-    // ✅ Step 7: Update DB Status
     shipment.status = "Cancelled";
     await shipment.save();
 
@@ -260,16 +216,12 @@ exports.cancelShipment = async (req, res) => {
       success: true,
       message: "Shipment Cancelled Successfully ✅",
       shipment,
-      delhiveryResponse: response.data,
     });
-
   } catch (error) {
-    console.log("❌ Cancel Error:", error.response?.data || error.message);
-
     return res.status(500).json({
       success: false,
       message: "Cancel Failed ❌",
-      error: error.response?.data || error.message,
+      error: error.message,
     });
   }
 };
