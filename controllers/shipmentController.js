@@ -95,7 +95,7 @@ exports.bookShipment = async (req, res) => {
         ],
 
         pickup_location: {
-          name: process.env.PICKUP_NAME || "NXTShip Warehouse",
+          name: process.env.PICKUP_LOCATION || "KING NXT",
         },
       });
 
