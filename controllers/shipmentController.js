@@ -9,24 +9,15 @@ const shipment = require("../models/shipment");
  */
 exports.bookShipment = async (req, res) => {
   try {
-
-    const lastShipment = await Shipment.findOne().sort({ orderNumber: -1 });
-
-    const lastNumber = lastShipment?.orderNumber || 0;
-    const nextOrderNumber = Number(lastNumber) + 1;
-
-    const newOrderId = `ORD-${new Date().getFullYear()}-${String(nextOrderNumber).padStart(5, "0")}`;
-
-
     const shipmentData = req.body;
-    shipmentData.orderId = newOrderId; // Ensure unique order ID is generated on the server side
 
-    // ✅ 1. Basic Validation
+    // ✅ Basic Validation
     if (
       !shipmentData.customerName ||
       !shipmentData.phone ||
       !shipmentData.address ||
-      !shipmentData.pincode 
+      !shipmentData.pincode ||
+      !shipmentData.orderId
     ) {
       return res.status(400).json({
         success: false,
@@ -34,7 +25,7 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ 2. Prevent Duplicate Order ID
+    // ✅ Prevent Duplicate Order ID
     const existing = await Shipment.findOne({
       orderId: shipmentData.orderId,
     });
@@ -46,7 +37,7 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ 3. Save Shipment First (Pending)
+    // ✅ Save Shipment First
     const savedShipment = await Shipment.create({
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -56,7 +47,6 @@ exports.bookShipment = async (req, res) => {
       pincode: shipmentData.pincode,
 
       orderId: shipmentData.orderId,
-      orderNumber: nextOrderNumber,
       paymentMode: shipmentData.paymentMode,
 
       orderValue: shipmentData.orderValue || 0,
@@ -65,7 +55,7 @@ exports.bookShipment = async (req, res) => {
       status: "Pending",
     });
 
-    // ✅ 4. Delhivery Token Check
+    // ✅ Token Check
     if (!process.env.ICC_TOKEN) {
       return res.status(500).json({
         success: false,
@@ -73,10 +63,10 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
-    // ✅ 5. Delhivery Booking API
+    // ✅ Delhivery Booking API
     const url = "https://track.delhivery.com/api/cmu/create.json";
 
-    // ✅ Delhivery expects x-www-form-urlencoded
+    // ✅ Payload (Old Working Format)
     const payload =
       "format=json&data=" +
       JSON.stringify({
@@ -93,7 +83,6 @@ exports.bookShipment = async (req, res) => {
             order: shipmentData.orderId,
             payment_mode: shipmentData.paymentMode,
 
-            // COD जरूरी है
             cod_amount:
               shipmentData.paymentMode === "COD"
                 ? shipmentData.orderValue
@@ -102,9 +91,10 @@ exports.bookShipment = async (req, res) => {
             total_amount: shipmentData.orderValue || 0,
             quantity: 1,
             weight: shipmentData.weight || 0.5,
-              // Custom fields (optional)
-              products_desc: "NXTShip Parcel",
-              shipment_type: "MPS",
+
+            // ✅ ये भी add रहने दो (Safe)
+            products_desc: "NXTShip Parcel",
+            shipment_type: "MPS",
           },
         ],
 
@@ -113,7 +103,7 @@ exports.bookShipment = async (req, res) => {
         },
       });
 
-    // ✅ 6. Call Delhivery
+    // ✅ Call Delhivery
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
@@ -123,18 +113,17 @@ exports.bookShipment = async (req, res) => {
 
     console.log("✅ DELHIVERY RESPONSE:", response.data);
 
-    // ✅ 7. Extract Waybill Properly
+    // ✅ Extract Waybill
     const waybill =
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.waybill ||
       null;
 
-    // ✅ 8. Update Shipment in DB
+    // ✅ Update DB
     savedShipment.waybill = waybill;
     savedShipment.status = waybill ? "Booked" : "Failed";
     await savedShipment.save();
 
-    // ✅ 9. Final Response
     return res.json({
       success: true,
       message: waybill
@@ -142,7 +131,6 @@ exports.bookShipment = async (req, res) => {
         : "Shipment Created but Waybill Not Assigned ❌",
 
       waybill,
-      orderId: shipmentData.orderId,
       shipment: savedShipment,
       delhiveryResponse: response.data,
     });
@@ -156,7 +144,6 @@ exports.bookShipment = async (req, res) => {
     });
   }
 };
-
 /**
  * ✅ GET ALL SHIPMENTS (Dashboard + View Shipments)
  */
