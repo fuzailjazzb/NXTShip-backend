@@ -5,7 +5,7 @@ const getAllCustomers = require('../controllers/customerController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Get All Customers Route
-router.get('/all', authMiddleware, getAllCustomers.createCustomerFromShipment);
+router.get('/all', authMiddleware, customerController.getAllCustomers);
 
 
 module.exports = router;

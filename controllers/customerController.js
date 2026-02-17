@@ -30,9 +30,9 @@ exports.createCustomerFromShipment = async (shipmentData) => {
             await existingCustomer.save();
         } else {
             await Customer.create({
-                name: shipmentData.name,
+                name: shipmentData.customerName || "Unknown Customer",
                 phone: shipmentData.phone,
-                city: shipmentData.city,
+                city: shipmentData.city || "N/A",
                 totalOrders: 1,
             }); 
         }
