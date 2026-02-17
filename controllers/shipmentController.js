@@ -98,6 +98,12 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
+    const pkg = response.data.packages?.[0];
+
+    console.log("status:", pkg.status);
+    console.log("waybill:", pkg.waybill);
+    console.log("REMARKS FULL:", pkg.remarks);
+
     return res.json({
       success: true,
       waybill,
