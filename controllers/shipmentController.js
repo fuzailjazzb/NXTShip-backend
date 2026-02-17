@@ -273,14 +273,14 @@ exports.checkPinSrvice = async (req, res) => {
   try {
     const pincode = req.params.pincode;
 
-    if (!pincode) {
+    if (!pincode || pincode.length !== 6) {
       return res.status(400).json({
         success: false,
         message: "Pincode is required ❌",
       });
     }
 
-    const url = `https://track.delhivery.com/api/pin-codes/json/?fliter_codes=${pincode}`;
+    const url = `https://track.delhivery.com/c/api/pin-codes/json/?filter_codes=${pincode}`;
 
     const response = await axios.get(url, {
       headers: {
