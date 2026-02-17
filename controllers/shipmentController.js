@@ -149,9 +149,9 @@ exports.bookShipment = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Shipment Booking Failed ❌",
+      message: "Shipment Booking Failed ❌", 
       error: error.response?.data || error.message,
-    });
+     });
   }
 };
 
@@ -181,7 +181,37 @@ exports.getAllShipments = async (req, res) => {
  */
 exports.trackShipment = async (req, res) => {
   try {
-    const waybill = req.params.waybill;
+    const { awb } = req.params;
+
+    const shipment = await Shipment.findOne({ waybill: awb });
+
+    if (!shipment) {
+      return res.json({
+        success: false,
+        message: "Shipment not found for this Waybill ❌",
+      });
+    }
+
+    return res.json({
+      success: true,
+      status: shipment.status || "Booked",
+      log: shipment.city || "N/A",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Tracking Failed ❌",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * ✅ DELHIVERY TRACKING API CALL (External Tracking)
+ */
+exports.delhiveryTracking = async (req, res) => {
+  try {
+    const { waybill } = req.params;
 
     const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${waybill}`;
 
@@ -234,6 +264,32 @@ exports.cancelShipment = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Cancel Failed ❌",
+      error: error.message,
+    });
+  }
+};
+
+exports.checkPinSrvice = async (req, res) => {
+  try {
+    const { pincode } = req.params;
+    const url = `https://track.delhivery.com/api/pin-codes/json/?code=${pincode}`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Token ${process.env.ICC_TOKEN}`,
+        Accept: "application/json",
+      },
+    });
+    
+    return res.json({
+      success: true,
+      pincode,
+      data: response.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check pincode service ❌",
       error: error.message,
     });
   }
