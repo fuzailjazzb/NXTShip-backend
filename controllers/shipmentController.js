@@ -271,7 +271,7 @@ exports.cancelShipment = async (req, res) => {
 
 exports.checkPinSrvice = async (req, res) => {
   try {
-    const pincode = req.params.pincode;
+    const pincode = req.params.pincode ||req.params.pin;
 
     if (!pincode || pincode.length !== 6) {
       return res.status(400).json({
