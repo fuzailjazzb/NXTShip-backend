@@ -5,6 +5,7 @@ require("dotenv").config();
 
 const adminRoutes = require("./routes/adminRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
+const customerRoutes = require("./routes/customerRoutes");
 
 const app = express();
 app.use(express.json());
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 });
 app.use("/api/admin", adminRoutes);
 app.use("/api/shipment", shipmentRoutes);
+app.use("/api/customer", customerRoutes);
 
 // MongoDB Connect
 mongoose

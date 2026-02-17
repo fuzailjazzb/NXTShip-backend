@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const{ createCustomerFromShipment } = require("./customerController");
 const { fetchWaybill } = require("../services/delhiveryService");
 
 /**
@@ -66,6 +67,8 @@ exports.bookShipment = async (req, res) => {
       },
     };
 
+
+
     // ✅ सबसे जरूरी चीज
     const formData =
       "format=json&data=" + encodeURIComponent(JSON.stringify(payload));
@@ -83,6 +86,8 @@ exports.bookShipment = async (req, res) => {
       }
     );
 
+    console.log(JSON.stringify(response.data, null, 2));
+
     const pkg = response.data.packages?.[0];
 
     console.log("status:", pkg.status);
@@ -90,6 +95,8 @@ exports.bookShipment = async (req, res) => {
     console.log("REMARKS FULL:", pkg.remarks);
 
     console.log("DELHIVERY RESPONSE:", response.data);
+
+    await createCustomerFromShipment(shipmentData);
 
     // ✅ Waybill निकालो
     const waybill =
