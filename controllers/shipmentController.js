@@ -28,17 +28,34 @@ exports.bookShipment = async (req, res) => {
           order: shipmentData.orderId,
           payment_mode: shipmentData.paymentMode,
 
+          products_desc: "Clothes",
+          hsn_code: "6109",
+
           cod_amount:
             shipmentData.paymentMode === "COD"
               ? shipmentData.orderValue
               : 0,
 
           total_amount: shipmentData.orderValue,
-          quantity: 1,
-          weight: shipmentData.weight || 0.5,
+          quantity: "1",
 
+          shipment_length: "10",
           shipment_width: "10",
           shipment_height: "10",
+
+          weight: shipmentData.weight || "0.5",
+
+          return_add: shipmentData.address,
+          return_pin: shipmentData.pincode,
+          return_city: shipmentData.city,
+          return_state: shipmentData.state,
+          return_country: "India",
+          return_phone: shipmentData.phone,
+
+          seller_name: "KING NXT",
+          seller_add: "Hyderabad Warehouse",
+          seller_inv: shipmentData.orderId,
+
           shipping_mode: "Surface",
           address_type: "home",
         },
@@ -213,7 +230,7 @@ exports.cancelShipment = async (req, res) => {
 
 exports.checkPinSrvice = async (req, res) => {
   try {
-    const pincode = req.params.pincode ||req.params.pin;
+    const pincode = req.params.pincode || req.params.pin;
 
     if (!pincode || pincode.length !== 6) {
       return res.status(400).json({
@@ -229,7 +246,7 @@ exports.checkPinSrvice = async (req, res) => {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
       },
     });
-    
+
     return res.json({
       success: true,
       pincode,
