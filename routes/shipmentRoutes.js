@@ -21,7 +21,7 @@ router.get("/delhivery/:waybill", authMiddleware, delhiveryTracking);
 router.get("/track/:awb", authMiddleware, trackShipment);
 
 // pin availability route
-router.get("/pin/:pin", authMiddleware, checkPinSrvice);
+router.get("/pin/:pin", checkPinSrvice);
 
 //cancel shipment route
 router.post("/cancel/:id", authMiddleware, cancelShipment);
