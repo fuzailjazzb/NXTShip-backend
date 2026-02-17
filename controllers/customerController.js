@@ -1,5 +1,5 @@
 const Customer = require('../models/customer');
-const Shipment = require('../models/shipment');
+
 
 exports.getAllCustomers = async (req, res) => {
     try {
@@ -18,23 +18,27 @@ exports.getAllCustomers = async (req, res) => {
     }
 }
 
+
 exports.createCustomerFromShipment = async (shipmentData) => {
     try {
-        let customer = await Customer.findOne({ phone: shipmentData.phone });
+        if (!shipmentData.phone) return;
 
-        if (customer) {
-            customer.totalOrders += 1;
-            await customer.save();
+        const existingCustomer = await Customer.findOne({ phone: shipmentData.phone });
+
+        if (existingCustomer) {
+            existingCustomer.totalOrders += 1;
+            await existingCustomer.save();
         } else {
-            customer = await Customer.create({
+            await Customer.create({
                 name: shipmentData.name,
                 phone: shipmentData.phone,
                 city: shipmentData.city,
                 totalOrders: 1,
-            });
+            }); 
         }
-        return customer;
+
     } catch (error) {
-        throw error;
+        console.log("Customer Creation Error:", error.message);
+            throw new Error("Failed to create or update customer");
     }
-}
+};
