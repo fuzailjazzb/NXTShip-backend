@@ -13,145 +13,87 @@ exports.bookShipment = async (req, res) => {
   try {
     const shipmentData = req.body;
 
-    // ✅ 1. Basic Validation
-    if (
-      !shipmentData.customerName ||
-      !shipmentData.phone ||
-      !shipmentData.address ||
-      !shipmentData.city ||
-      !shipmentData.state ||
-      !shipmentData.pincode ||
-      !shipmentData.orderId ||
-      !shipmentData.paymentMode
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Required fields missing ❌",
-      });
-    }
+    // ✅ Delhivery Payload (documentation exact)
+    const payload = {
+      shipments: [
+        {
+          name: shipmentData.customerName,
+          add: shipmentData.address,
+          pin: shipmentData.pincode,
+          city: shipmentData.city,
+          state: shipmentData.state,
+          country: "India",
+          phone: shipmentData.phone,
 
-    // ✅ 2. Prevent Duplicate Order ID
-    const existing = await Shipment.findOne({
-      orderId: shipmentData.orderId,
-    });
+          order: shipmentData.orderId,
+          payment_mode: shipmentData.paymentMode,
 
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Order ID already exists ❌ Use new Order ID",
-      });
-    }
+          cod_amount:
+            shipmentData.paymentMode === "COD"
+              ? shipmentData.orderValue
+              : 0,
 
-    // ✅ 3. Save Shipment First (Pending)
-    const savedShipment = await Shipment.create({
-      customerName: shipmentData.customerName,
-      phone: shipmentData.phone,
-      address: shipmentData.address,
-      city: shipmentData.city,
-      state: shipmentData.state,
-      pincode: shipmentData.pincode,
+          total_amount: shipmentData.orderValue,
+          quantity: 1,
+          weight: shipmentData.weight || 0.5,
 
-      orderId: shipmentData.orderId,
-      paymentMode: shipmentData.paymentMode,
-
-      orderValue: shipmentData.orderValue || 0,
-      weight: shipmentData.weight || 0.5,
-
-      status: "Pending",
-    });
-
-    // ✅ 4. Delhivery Token Check
-    if (!process.env.ICC_TOKEN) {
-      return res.status(500).json({
-        success: false,
-        message: "ICC_TOKEN missing in ENV ❌",
-      });
-    }
-
-    // ✅ 5. Delhivery Booking API URL
-    const url = "https://track.delhivery.com/api/cmu/create.json";
-
-    // ✅ 6. Correct Payload (NO WAYBILL FIELD)
-    const payload =
-      "format=json&data=" +
-      JSON.stringify({
-        shipments: [
-          {
-            name: shipmentData.customerName,
-            add: shipmentData.address,
-            pin: shipmentData.pincode,
-            city: shipmentData.city,
-            state: shipmentData.state,
-            country: "India",
-            phone: shipmentData.phone,
-
-            order: shipmentData.orderId,
-            payment_mode: shipmentData.paymentMode,
-
-            cod_amount:
-              shipmentData.paymentMode === "COD"
-                ? shipmentData.orderValue
-                : 0,
-
-            total_amount: shipmentData.orderValue || 0,
-            quantity: 1,
-            weight: shipmentData.weight || 0.5,
-
-            shipping_mode: "Surface",
-          },
-        ],
-
-        pickup_location: {
-          name: process.env.PICKUP_LOCATION || "KING NXT",
+          shipment_width: "10",
+          shipment_height: "10",
+          shipping_mode: "Surface",
+          address_type: "home",
         },
-      });
+      ],
 
-    // ✅ 7. Call Delhivery API
-    const response = await axios.post(url, payload, {
-      headers: {
-        Authorization: `Token ${process.env.ICC_TOKEN}`,
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
+      pickup_location: {
+        name: "KING NXT",
       },
-    });
+    };
 
-    console.log("✅ DELHIVERY RESPONSE:", response.data);
+    // ✅ सबसे जरूरी चीज
+    const formData =
+      "format=json&data=" + encodeURIComponent(JSON.stringify(payload));
 
-    // ✅ 8. Extract Waybill
-    const waybill = response.data?.packages?.[0]?.waybill || null;
+    // ✅ Delhivery API Call
+    const response = await axios.post(
+      "https://track.delhivery.com/api/cmu/create.json",
+      formData,
+      {
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
 
-    // ❌ If Delhivery did not assign waybill
+    console.log("DELHIVERY RESPONSE:", response.data);
+
+    // ✅ Waybill निकालो
+    const waybill =
+      response.data?.packages?.[0]?.waybill ||
+      response.data?.packages?.[0]?.waybill_number;
+
     if (!waybill) {
-      savedShipment.status = "Failed";
-      await savedShipment.save();
-
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: "No waybill received from Delhivery ❌",
+        message: "No waybill received from Delhivery",
         delhiveryResponse: response.data,
       });
     }
 
-    // ✅ 9. Update Shipment in DB
-    savedShipment.waybill = waybill;
-    savedShipment.status = "Booked";
-    await savedShipment.save();
-
-    // ✅ 10. Success Response
     return res.json({
       success: true,
-      message: "Shipment Booked Successfully ✅",
       waybill,
-      shipment: savedShipment,
+      orderId: shipmentData.orderId,
     });
   } catch (error) {
-    console.log("❌ Booking Error:", error.response?.data || error.message);
+    console.log("Booking Error:", error.response?.data || error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Shipment Booking Failed ❌", 
+      message: "Shipment Booking Failed",
       error: error.response?.data || error.message,
-     });
+    });
   }
 };
 
