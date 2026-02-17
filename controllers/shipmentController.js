@@ -271,13 +271,20 @@ exports.cancelShipment = async (req, res) => {
 
 exports.checkPinSrvice = async (req, res) => {
   try {
-    const { pincode } = req.params;
-    const url = `https://track.delhivery.com/api/pin-codes/json/?code=${pincode}`;
+    const pincode = req.params.pincode;
+
+    if (!pincode) {
+      return res.status(400).json({
+        success: false,
+        message: "Pincode is required ❌",
+      });
+    }
+
+    const url = `https://track.delhivery.com/api/pin-codes/json/?fliter_codes=${pincode}`;
 
     const response = await axios.get(url, {
       headers: {
         Authorization: `Token ${process.env.ICC_TOKEN}`,
-        Accept: "application/json",
       },
     });
     
@@ -287,6 +294,9 @@ exports.checkPinSrvice = async (req, res) => {
       data: response.data,
     });
   } catch (error) {
+
+    console.log("❌ Pincode Check Error:", error.response?.data || error.message);
+
     return res.status(500).json({
       success: false,
       message: "Failed to check pincode service ❌",
