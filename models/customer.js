@@ -32,6 +32,14 @@ const customerSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+
+    walletBalance: {
+        type: Number,
+        default: 0,
+        
+    }
+    
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Customer', customerSchema);
