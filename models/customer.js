@@ -12,9 +12,14 @@ const customerSchema = new mongoose.Schema({
         unique: true,
     },
 
+    email: {
+        type: String,
+        default: "",
+    },
+
     city: {
         type: String,
-        required: true,
+        default: "",
     },
 
     totalOrders: {
