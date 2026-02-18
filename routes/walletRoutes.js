@@ -8,6 +8,6 @@ const customerAuth = require("../middleware/customerAuth");
 router.get("/balance", customerAuth, getWalletBalance);
 
 // Add Funds to Wallet Route
-router.post("/add-funds", customerAuth, addFunds);
+// router.post("/add-funds", customerAuth, addFunds);
 
 module.exports = router;
