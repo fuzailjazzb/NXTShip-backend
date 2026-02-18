@@ -5,6 +5,8 @@ const customerController = require('../controllers/customerController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { customerAuth } = require('../middleware/customerAuth');
 
+console.log("customer controller:", customerController);
+
 // Get All Customers Route
 router.get('/all', authMiddleware, customerController.getAllCustomers);
 

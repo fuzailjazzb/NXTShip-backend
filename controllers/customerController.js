@@ -21,6 +21,7 @@ exports.getAllCustomers = async (req, res) => {
 }
 
 
+
 exports.createCustomerFromShipment = async (shipmentData) => {
     try {
         if (!shipmentData.phone) return;
@@ -118,3 +119,4 @@ exports.updateCustomerProfile = async (req, res) => {
     }
 };
 
+console.log("EXPORTS:", module.exports);
