@@ -24,6 +24,7 @@ app.use("/api/customer", customerRoutes);
 app.use("/api/customer/auth", require("./routes/customerAuthRoutes"));
 app.use("/api/customer/shipment", require("./routes/customerShipmentRoutes"));
 
+
 // MongoDB Connect
 mongoose
   .connect(process.env.MONGO_URI)
