@@ -1,5 +1,7 @@
 const Customer = require('../models/customer');
 
+console.log("Customer Controller Loaded...");
+
 
 exports.getAllCustomers = async (req, res) => {
     try {
