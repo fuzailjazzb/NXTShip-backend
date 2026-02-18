@@ -2,9 +2,12 @@ const Customer = require("../models/customer");
 
 exports.getWalletBalance = async (req, res) => {
   try {
-    console.log("📌 Wallet Request User:", req.customer);
+    console.log("Wallet Balance API hit.......");
+  
+    const customerId = req.customer.id;
+    console.log("📌 Customer ID:", customerId);
 
-    const customer = await Customer.findById(req.customer.id);
+    const customer = await Customer.findById(customerId);
 
     if (!customer) {
       console.log("❌ Customer not found in wallet fetch");
@@ -19,7 +22,7 @@ exports.getWalletBalance = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      balance: customer.walletBalance
+      walletBalance: customer.walletBalance,
     });
 
   } catch (err) {
