@@ -36,8 +36,24 @@ const customerSchema = new mongoose.Schema({
     walletBalance: {
         type: Number,
         default: 0,
-        
-    }
+
+    },
+
+    walletTransactions: [
+        {
+            amount: Number,
+            type: {
+                type: String,
+                default: "credit", // or "debit"
+            },
+            message: String,
+            date: {
+                type: Date,
+                default: Date.now,
+            },
+        },
+    ],
+
     
 
 }, { timestamps: true });
