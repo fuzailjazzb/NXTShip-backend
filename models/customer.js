@@ -14,7 +14,13 @@ const customerSchema = new mongoose.Schema({
 
     email: {
         type: String,
-        default: "",
+        required: true,
+        unique: true,
+    },
+
+    password: {
+        type: String,
+        required: true,
     },
 
     city: {
