@@ -23,11 +23,6 @@ const customerSchema = new mongoose.Schema({
         required: true,
     },
 
-    city: {
-        type: String,
-        default: "",
-    },
-
     totalOrders: {
         type: Number,
         default: 0,
@@ -38,6 +33,33 @@ const customerSchema = new mongoose.Schema({
         default: 0,
 
     },
+
+    address: {
+        type: String,
+        default: "",
+    },
+    
+    landmark: {
+        type: String,
+        default: "",
+    },
+
+    city: {
+        type: String,
+        default: "",
+    },
+
+    state: {
+        type: String,
+        default: "",
+    },
+
+    password: {
+        type: String,
+        required: true,
+    },
+
+
 
     walletTransactions: [
         {
@@ -53,6 +75,8 @@ const customerSchema = new mongoose.Schema({
             },
         },
     ],
+
+
 
     
 
