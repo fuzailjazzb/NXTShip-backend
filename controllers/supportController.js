@@ -1,4 +1,4 @@
-const SupportTicket = require("../models/SupportTicket");
+const SupportTicket = require("../models/SupportTickets");
 
 console.log("✅ Support Controller Loaded...");
 
