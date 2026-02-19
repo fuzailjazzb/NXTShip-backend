@@ -3,7 +3,7 @@ const router = express.Router();
 
 const customerController = require('../controllers/customerController');
 const authMiddleware = require('../middleware/authMiddleware');
-const  customerAuth  = require('../middleware/customerAuth');
+const { customerAuth }  = require('../middleware/customerAuth');
 
 console.log("customer controller:", customerController);
 
@@ -12,10 +12,10 @@ router.get('/all', authMiddleware, customerController.getAllCustomers);
 
 
 // Get Customer Profile Route
-router.get('/profile', customerAuth.customerAuth, customerController.getCustomerProfile);
+router.get('/profile', customerAuth, customerController.getCustomerProfile);
 
 // Update Customer Profile Route
-router.put('/profile/update', customerAuth.customerAuth, customerController.updateCustomerProfile);
+router.put('/profile/update', customerAuth, customerController.updateCustomerProfile);
 
 
 module.exports = router;
