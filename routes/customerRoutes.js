@@ -12,10 +12,10 @@ router.get('/all', authMiddleware, customerController.getAllCustomers);
 
 
 // Get Customer Profile Route
-router.get('/profile', customerController.getCustomerProfile);
+router.get('/profile', customerAuth.customerAuth, customerController.getCustomerProfile);
 
 // Update Customer Profile Route
-router.put('/profile/update', customerController.updateCustomerProfile);
+router.put('/profile/update', customerAuth.customerAuth, customerController.updateCustomerProfile);
 
 
 module.exports = router;

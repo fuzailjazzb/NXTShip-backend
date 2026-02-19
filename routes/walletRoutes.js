@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { getWalletBalance, addFunds, getWalletTransactions } = require("../controllers/walletController");
-const customerAuth = require("../middleware/customerAuth");
+const { customerAuth } = require("../middleware/customerAuth");
 
 
 // Get Wallet Balance Route
