@@ -54,7 +54,7 @@ const customerSchema = new mongoose.Schema({
         default: "",
     },
 
-    password: {
+    pincode: {
         type: String,
         required: true,
     },
