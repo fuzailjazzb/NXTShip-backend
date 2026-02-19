@@ -82,6 +82,7 @@ exports.updateCustomerProfile = async (req, res) => {
     try {
         console.log("Update Profile API hit.......");
         console.log("Body Received:", req.body);
+        console.log("Customer ID from Auth Middleware:", req.customer.id);
 
         const customer = await Customer.findById(req.customer.id);
 
