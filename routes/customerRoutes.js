@@ -15,6 +15,12 @@ router.get('/all', authMiddleware, customerController.getAllCustomers);
 router.get('/profile', customerAuth, customerController.getCustomerProfile);
 
 // Update Customer Profile Route
+
+console.log('Type of handler:', typeof customerController.updateCustomerProfile);
+console.log('Handler value:', customerController.updateCustomerProfile);
+router.put('/some-path', customerController.updateCustomerProfile); // line 18
+
+
 router.put('/profile/update', customerAuth, customerController.updateCustomerProfile);
 
 
