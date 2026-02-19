@@ -3,6 +3,8 @@ const shipment = require("../models/shipment");
 exports.getCustomerShipments = async (req, res) => {
   try {
 
+    console.log(" type of customer id:", typeof req.customer._id);
+
     console.log("Get Shipments API hit for customer:", req.customer._id);
 
     const shipments = await shipment.find({ customerId: req.customer._id }).sort({ createdAt: -1 });
@@ -24,3 +26,7 @@ exports.getCustomerShipments = async (req, res) => {
     });
   } 
 };
+
+console.log("customer shipment controller:", exports);
+console.log("getCustomerShipments function:", exports.getCustomerShipments);
+console.log("Type of getCustomerShipments:", typeof exports.getCustomerShipments);
