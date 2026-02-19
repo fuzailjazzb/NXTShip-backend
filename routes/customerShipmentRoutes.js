@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { customerAuth } = require("../middleware/customerAuth");
-const { shipmentController } = require("../controllers/customerShipmentController");
+const shipmentController = require("../controllers/customerShipmentController");
 
 console.log("customer shipment controller:", shipmentController);
 console.log("type of shipmentController:", typeof shipmentController);
