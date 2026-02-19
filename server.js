@@ -6,6 +6,7 @@ require("dotenv").config();
 const adminRoutes = require("./routes/adminRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
+const supportRoutes = require("./routes/supportRoutes");
 
 const app = express();
 app.use(express.json());
@@ -26,6 +27,9 @@ app.use("/api/customer/auth", require("./routes/customerAuthRoutes"));
 app.use("/api/customer/shipment", require("./routes/customerShipmentRoutes"));
 app.use("/api/wallet", require("./routes/walletRoutes"));
 app.use("/api/add-funds", require("./routes/walletRoutes"));
+app.use("/api/support", supportRoutes);
+
+
 
 
 // MongoDB Connect
