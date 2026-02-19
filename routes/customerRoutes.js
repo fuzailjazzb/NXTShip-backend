@@ -15,7 +15,7 @@ router.get('/all', authMiddleware, customerController.getAllCustomers);
 router.get('/profile', customerController.getCustomerProfile);
 
 // Update Customer Profile Route
-router.put('/profile/update', customerAuth, customerController.updateCustomerProfile);
+router.put('/profile/update', customerController.updateCustomerProfile);
 
 
 module.exports = router;
