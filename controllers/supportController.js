@@ -1,4 +1,5 @@
 const SupportTicket = require("../models/SupportTickets");
+const { sendTicketMail } = require("../utils/sendMail");
 
 console.log("✅ Support Controller Loaded...");
 
@@ -25,6 +26,18 @@ exports.createTicket = async (req, res) => {
     });
 
     console.log("✅ Ticket Created:", ticket);
+
+    await sendTicketMail(
+        customer.email,
+        "Support Ticket Confirmation",
+        `Hi ${customer.name},<br/>
+        Your Ticket has been created successfully.<br/>
+        <b>Subject:</b> ${subject}<br/>
+        <b>Message:</b> ${message}<br/>
+        Our support team will get back to you shortly.<br/>
+        Best Regards,<br/>
+        NXTShip Support Team`
+    );
 
     res.status(201).json({
       success: true,
