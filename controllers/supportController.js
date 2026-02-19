@@ -1,5 +1,6 @@
 const SupportTicket = require("../models/SupportTickets");
 const { sendTicketMail } = require("../utils/sendMail");
+const Customer = require("../models/customer");
 
 console.log("✅ Support Controller Loaded...");
 
@@ -19,8 +20,20 @@ exports.createTicket = async (req, res) => {
       });
     }
 
+    const customer = await Customer.findById(req.customer._id);
+
+    // ✅ Check if customer exists
+    if (!customer) {
+        console.log("❌ Customer not found for ticket creation");
+        return res.status(404).json({
+            success: false,
+            message: "Customer not found"
+        });
+    }
+
+    // ✅ Create Support Ticket
     const ticket = await SupportTicket.create({
-      customerId: req.customer._id,
+      customerId: customer._id,
       subject,
       message,
     });
