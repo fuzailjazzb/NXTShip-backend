@@ -29,6 +29,7 @@ app.use("/api/wallet", require("./routes/walletRoutes"));
 app.use("/api/add-funds", require("./routes/walletRoutes"));
 app.use("/api/support", supportRoutes);
 app.use("/api/customer", require("./routes/reportRoutes"));
+app.use("/api/resources", require("./routes/resourceRoutes"));
 
 
 
