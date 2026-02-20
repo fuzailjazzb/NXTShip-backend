@@ -5,7 +5,7 @@ const {
     generateInvoicePDF,
     generateShippingLabelPDF,
     exportShipmentCSV
-} = require('../controllers/resourceController');
+} = require('../controllers/resourcesController');
 
 const { customerAuth } = require('../middleware/customerAuth');
 
