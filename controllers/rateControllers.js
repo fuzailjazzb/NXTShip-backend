@@ -76,3 +76,4 @@ const calculateDelhiveryRate = async (req, res) => {
 };
 
 module.exports = { calculateDelhiveryRate };
+
