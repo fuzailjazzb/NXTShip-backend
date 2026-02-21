@@ -45,11 +45,27 @@ const calculateDelhiveryRate = async (req, res) => {
 
         //safe extraction (Depends on Delhivery's response structure)
 
-        const totalAmount = data?.totalAmount || data?.total || data?.invoice_amount || 0;
-        const freight = data?.freight_charge || data?.freight || 0;
-        const fuelSurcharge = data?.fuel_surcharge || data?.fuel || 0;
-        const codCharge = data?.cod_charges || data?.cod || 0;
-        const gst = data?.tax || data?.gst || 0;
+        const raw = Array.isArray(data) ? data[0] : data; // Handle both array and object responses
+        if (!raw) {
+            console.log("❌ No valid data found in response");
+            return res.status(500).json({
+                success: false,
+                message: "No valid data found in response"
+            });
+        }
+
+        const totalAmount = data?.totalAmount || data?.total || data?.invoice_amount || data.total_amount || 0;
+        const freight = data?.freight_charge || data?.freight || data.charge_DL || 0;
+        const fuelSurcharge = data?.fuel_surcharge || data?.fuel || data.charge_FS || 0;
+        const codCharge = data?.cod_charges || data?.cod || data.charge_COD || data.charge_CCOD || 0;
+        
+        let gst = 0;
+        if (data.tax_data) {
+            gst = 
+                (data.tax_data.SGST || 0) +
+                (data.tax_data.CGST || 0) +
+                (data.tax_data.IGST || 0);
+        }
 
         console.log("Extracted Charges:", { freight, fuelSurcharge, codCharge, gst, totalAmount });
 
