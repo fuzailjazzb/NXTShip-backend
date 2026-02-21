@@ -9,13 +9,16 @@ const calculateDelhiveryRate = async (req, res) => {
         console.log("Incoming Data:", req.body);
 
         if (!fromPincode || !toPincode || !weight) {
+            console.log("❌ Missing Required Fields");
             return res.status(400).json({
                 success: false,
                 message: "Missing required fields"
             });
         }
 
-        const chargeWeight = weight * 1000; // KG to grams
+        const chargeWeight = Number(weight) * 1000; // KG to grams
+
+        console.log("Converted Weight (grams):", chargeWeight);
 
         const url = `https://track.delhivery.com/api/kinko/v1/invoice/charges/.json`;
 
@@ -36,9 +39,29 @@ const calculateDelhiveryRate = async (req, res) => {
 
         console.log("✅ Delhivery Response:", response.data);
 
+        console.log("Calculated Rate:", response.data.charge);
+
+        const data = response.data || {};
+
+        //safe extraction (Depends on Delhivery's response structure)
+
+        const totalAmount = data?.totalAmount || data?.total || data?.invoice_amount || 0;
+        const freight = data?.freight_charge || data?.freight || 0;
+        const fuelSurcharge = data?.fuel_surcharge || data?.fuel || 0;
+        const codCharge = data?.cod_charges || data?.cod || 0;
+        const gst = data?.tax || data?.gst || 0;
+
+        console.log("Extracted Charges:", { freight, fuelSurcharge, codCharge, gst, totalAmount });
+
         return res.status(200).json({
             success: true,
-            raw: response.data
+            breakdown: {
+                freight,
+                codCharge,
+                fuelSurcharge,
+                gst,
+                totalAmount
+            },
         });
 
     } catch (error) {
