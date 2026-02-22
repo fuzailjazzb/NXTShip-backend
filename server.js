@@ -7,6 +7,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const supportRoutes = require("./routes/supportRoutes");
+const customerBookingRoutes = require("./routes/customerBookingRoutes");
 
 const app = express();
 app.use(express.json());
@@ -31,6 +32,7 @@ app.use("/api/support", supportRoutes);
 app.use("/api/customer", require("./routes/reportRoutes"));
 app.use("/api/resources", require("./routes/resourceRoutes"));
 app.use("/api/rate", require("./routes/rateRoutes"));
+app.use("/api/customer/shipment", customerBookingRoutes);
 
 
 
