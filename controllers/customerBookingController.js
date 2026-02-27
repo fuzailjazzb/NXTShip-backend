@@ -5,7 +5,7 @@ const Shipment = require("../models/shipment");
  * 📦 CUSTOMER BOOK SHIPMENT
  * Secure – Customer can only create shipment for himself
  */
-const bookCustomerShipment = async (req, res) => {
+exports.bookCustomerShipment = async (req, res) => {
     try {
         const shipmentData = req.body;
 
@@ -116,8 +116,4 @@ const bookCustomerShipment = async (req, res) => {
             error: error.response?.data || error.message,
         });
     }
-};
-
-module.exports = {
-    bookCustomerShipment
 };
