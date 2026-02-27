@@ -1,4 +1,6 @@
 const Customer = require("../models/customer");
+const crypto = require("crypto");
+const razorpay = require("../config/razorpay");
 
 // Get Wallet Balance
 
@@ -46,7 +48,7 @@ exports.addFunds = async (req, res) => {
     console.log("Add Funds API hit.......");
 
     const customerId = req.customer.id;
-    const { amount } = req.body;
+    const amount = Number(req.body.amount);
 
     console.log("📌 Customer ID:", customerId);
     console.log("📌 Amount Recieved:", amount);
@@ -72,7 +74,7 @@ exports.addFunds = async (req, res) => {
 
     // Update wallet balance
 
-    customer.walletBalance += amount;
+    customer.walletBalance = (customer.walletBalance || 0) + amount;
 
     // Save Trnsaction 
 
@@ -138,5 +140,94 @@ exports.getWalletTransactions = async (req, res) => {
       message: "Server Error",
       error: err.message
     });
+  }
+};
+
+exports.createRazorpayOrder = async (req, res) => {
+  try {
+    console.log("💳 Create Razorpay Order API hit");
+
+    const amount = Number(req.body.amount);
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount"
+      });
+    }
+
+    const options = {
+      amount: amount * 100, // paisa
+      currency: "INR",
+      receipt: "wallet_" + Date.now(),
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    console.log("✅ Razorpay Order Created:", order.id);
+
+    res.status(200).json({
+      success: true,
+      order
+    });
+
+  } catch (err) {
+    console.log("🔥 Razorpay Order Error:", err);
+    res.status(500).json({ success:false });
+  }
+};
+
+
+
+exports.verifyPaymentAndAddFunds = async (req, res) => {
+  try {
+    console.log("✅ Payment Verification API hit");
+
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      amount
+    } = req.body;
+
+    const body =
+      razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      console.log("❌ Signature mismatch");
+      return res.status(400).json({
+        success:false,
+        message:"Payment verification failed"
+      });
+    }
+
+    const customer = await Customer.findById(req.customer.id);
+
+    customer.walletBalance += Number(amount);
+
+    customer.walletTransactions.unshift({
+      amount,
+      type: "credit",
+      message: "Added via Razorpay",
+      date: new Date(),
+    });
+
+    await customer.save();
+
+    console.log("💰 Wallet Updated:", customer.walletBalance);
+
+    res.json({
+      success:true,
+      walletBalance: customer.walletBalance
+    });
+
+  } catch (err) {
+    console.log("🔥 Verify Payment Error:", err);
+    res.status(500).json({ success:false });
   }
 };

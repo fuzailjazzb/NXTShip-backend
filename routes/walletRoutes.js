@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { getWalletBalance, addFunds, getWalletTransactions } = require("../controllers/walletController");
+const { getWalletBalance, createRazorpayOrder, getWalletTransactions, verifyPaymentAndAddFunds } = require("../controllers/walletController");
 const { customerAuth } = require("../middleware/customerAuth");
 
 
@@ -13,7 +13,10 @@ router.get("/balance", customerAuth, getWalletBalance);
 router.get("/transactions", customerAuth, getWalletTransactions);
 
 // Add Funds to Wallet Route
-router.post("/add-funds", customerAuth, addFunds);
+router.post("/create-order", customerAuth, createRazorpayOrder);
+
+// verify orders funds
+router.post("/verify-payment", customerAuth, verifyPaymentAndAddFunds);
 
 
 module.exports = router;
