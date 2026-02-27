@@ -1,3 +1,5 @@
+console.log(typeof bookCustomerShipment);
+
 const express = require("express");
 const router = express.Router();
 
