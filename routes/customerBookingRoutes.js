@@ -7,7 +7,7 @@ const { customerAuth } = require("../middleware/customerAuth");
 console.log(typeof bookCustomerShipment);
 
 // 🔐 Customer Create Shipment
-router.post("/create", customerAuth, bookCustomerShipment);
+router.post("/book", customerAuth, bookCustomerShipment);
 
 
 
