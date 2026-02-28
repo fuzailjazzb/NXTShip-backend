@@ -1,6 +1,7 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
 const Customer = require("../models/customer");
+const Commission = require("../models/commission");
 
 /**
  * 📦 CUSTOMER BOOK SHIPMENT
@@ -100,11 +101,11 @@ exports.bookCustomerShipment = async (req, res) => {
         }
 
         // Deduct Wallet
-        customer.walletBalance -= shippingCharge;
+        customer.walletBalance -= finalCharge;
 
         // Save Transactions
         customer.walletTransactions.unshift({
-            amount: shippingCharge,
+            amount: finalCharge,
             type: "debit",
             message: " Shipment Booking Charge Deducted.",
             date: new Date()
@@ -115,10 +116,10 @@ exports.bookCustomerShipment = async (req, res) => {
             
         } catch (error) {
             if (customer) {
-                customer.walletBalance += shippingCharge;
+                customer.walletBalance += finalCharge;
 
                 customer.walletTransactions.unshift({
-                    amount: shippingCharge,
+                    amount: finalCharge,
                     type: "credit",
                     message: "Refund - Shipment Booking Failed",
                     date: new Date()
@@ -127,6 +128,20 @@ exports.bookCustomerShipment = async (req, res) => {
             }
         }
 
+        const courierCharge = shippingCharge;
+
+        // get commission Setting 
+        let commission = await Commission.findOne();
+
+        if (!commission) {
+            commission = { flatCommission: 10, percentageCommission: 0 };
+        }
+
+        // calculate commission
+        
+        const adminCommission = commission.flatCommission + (courierCharge * commission.percentageCommission) / 100;
+
+        const finalCharge = courierCharge + adminCommission;
         
 
         const waybill =
