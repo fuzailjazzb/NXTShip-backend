@@ -120,4 +120,13 @@ exports.updateCustomerProfile = async (req, res) => {
     }
 };
 
+exports.getReferralStats = async (req, res) => {
+    const customer = await Customer.findById(req.user.id);
+
+    res.json({
+        referralCode: customer.referralCode,
+        totalEarnings: customer.referralEarnings
+    });
+};
+
 console.log("EXPORTS:", module.exports);

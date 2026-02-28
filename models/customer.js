@@ -38,7 +38,7 @@ const customerSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
-    
+
     landmark: {
         type: String,
         default: "",
@@ -57,6 +57,22 @@ const customerSchema = new mongoose.Schema({
     pincode: {
         type: String,
         required: true,
+    },
+
+    referralCode: {
+        type: String,
+        unique: true
+    },
+
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Customer",
+        default: null
+    },
+
+    referralEarnings: {
+        type: Number,
+        default: 0
     },
 
 
@@ -78,7 +94,7 @@ const customerSchema = new mongoose.Schema({
 
 
 
-    
+
 
 }, { timestamps: true });
 

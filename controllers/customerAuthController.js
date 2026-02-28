@@ -1,6 +1,7 @@
 const Customer = require("../models/customer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 exports.signupCustomer = async (req, res) => {
   try {
@@ -25,15 +26,32 @@ exports.signupCustomer = async (req, res) => {
       });
     }
 
+    const { referral } = req.body;
+
+    let referredUser = null;
+
+    if (referral) {
+      referredUser = await Customer.findOne({
+        referralCode: referral
+      });
+    }
+
+
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // creating Referral code
+    const referralCode = crypto.randomBytes(4).toString("hex");
 
     // Create customer
     const customer = await Customer.create({
       name,
       email,
       phone,
-      password: hashedPassword
+      password: hashedPassword,
+      referralCode,
+      referredBy: referredUser ? referredUser._id : null
     });
 
     // Generate Token

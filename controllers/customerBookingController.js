@@ -2,6 +2,9 @@ const axios = require("axios");
 const Shipment = require("../models/shipment");
 const Customer = require("../models/customer");
 const Commission = require("../models/commission");
+const AdminEarning = require("../models/adminEarning");
+const ReferralEarning = require("../models/referralEarning");
+const referralEarning = require("../models/referralEarning");
 
 /**
  * 📦 CUSTOMER BOOK SHIPMENT
@@ -86,34 +89,34 @@ exports.bookCustomerShipment = async (req, res) => {
         const customer = await Customer.findById(req.user.id);
         try {
             if (!customer) {
-            return res.status(404).json({
-                success: false,
-                message: "Customer not found"
+                return res.status(404).json({
+                    success: false,
+                    message: "Customer not found"
+                });
+            }
+
+            // Insufficient Wallet
+            if (customer.walletBalance < shippingCharge) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Insufficient Wallet Balance. Please Recharge."
+                });
+            }
+
+            // Deduct Wallet
+            customer.walletBalance -= finalCharge;
+
+            // Save Transactions
+            customer.walletTransactions.unshift({
+                amount: finalCharge,
+                type: "debit",
+                message: " Shipment Booking Charge Deducted.",
+                date: new Date()
+
             });
-        }
 
-        // Insufficient Wallet
-        if (customer.walletBalance < shippingCharge) {
-            return res.status(404).json({
-                success: false,
-                message: "Insufficient Wallet Balance. Please Recharge."
-            });
-        }
+            await customer.save();
 
-        // Deduct Wallet
-        customer.walletBalance -= finalCharge;
-
-        // Save Transactions
-        customer.walletTransactions.unshift({
-            amount: finalCharge,
-            type: "debit",
-            message: " Shipment Booking Charge Deducted.",
-            date: new Date()
-
-        });
-
-        await customer.save();
-            
         } catch (error) {
             if (customer) {
                 customer.walletBalance += finalCharge;
@@ -138,11 +141,11 @@ exports.bookCustomerShipment = async (req, res) => {
         }
 
         // calculate commission
-        
+
         const adminCommission = commission.flatCommission + (courierCharge * commission.percentageCommission) / 100;
 
         const finalCharge = courierCharge + adminCommission;
-        
+
 
         const waybill =
             response.data?.packages?.[0]?.waybill ||
@@ -162,6 +165,44 @@ exports.bookCustomerShipment = async (req, res) => {
             status: "Booked",
             customerId: req.user.id,
         });
+
+        await AdminEarning.create({
+            customerId: req.user.id,
+            shipmentId: newShipment._id,
+            amount: adminCommission
+        });
+
+        // referral lifetime income 
+        const bookingCustomer = await Customer.findById(req.user.id);
+
+        if (bookingCustomer.refferedBy) {
+            const REFERRAL_PERCENT = 0.25;
+
+            const referralAmount = (finalCharge * REFERRAL_PERCENT) / 100;
+            const referrer = await Customer.findById(bookingCustomer.referredBy);
+
+            if (referrer) {
+                // add earning to referrer wallet
+                referrer.walletBalance += referralAmount;
+                referrer.referralEarnings += referralAmount;
+
+                referrer.walletTransactions.unshift({
+                    amount: referralAmount,
+                    type: "credit",
+                    message: "Referral Lifetime Income"
+                });
+
+                await referrer.save();
+
+                // save referral history 
+                await referralEarning.create({
+                    referredId: referrer._id,
+                    customerId: bookingCustomer._id,
+                    shipmentId: newShipment._id,
+                    earning: referralAmount
+                });
+            }
+        }
 
         return res.status(201).json({
             success: true,
@@ -183,4 +224,5 @@ exports.bookCustomerShipment = async (req, res) => {
             error: error.response?.data || error.message,
         });
     }
+
 };

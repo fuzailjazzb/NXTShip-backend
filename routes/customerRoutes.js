@@ -22,6 +22,7 @@ router.put('/some-path', customerController.updateCustomerProfile); // line 18
 
 
 router.put('/profile/update', customerAuth, customerController.updateCustomerProfile);
+router.get("/referral", customerAuth, customerController.getReferralStats);
 
 
 module.exports = router;
