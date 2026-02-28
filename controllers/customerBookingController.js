@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const Customer = require("../models/customer");
 
 /**
  * 📦 CUSTOMER BOOK SHIPMENT
@@ -78,6 +79,56 @@ exports.bookCustomerShipment = async (req, res) => {
             }
         );
 
+        const shippingCharge = shippingData.shippingCharge || 42.5;
+
+        // Get Customer Wallet
+        const customer = await Customer.findById(req.user.id);
+        try {
+            if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: "Customer not found"
+            });
+        }
+
+        // Insufficient Wallet
+        if (customer.walletBalance < shippingCharge) {
+            return res.status(404).json({
+                success: false,
+                message: "Insufficient Wallet Balance. Please Recharge."
+            });
+        }
+
+        // Deduct Wallet
+        customer.walletBalance -= shippingCharge;
+
+        // Save Transactions
+        customer.walletTransactions.unshift({
+            amount: shippingCharge,
+            type: "debit",
+            message: " Shipment Booking Charge Deducted.",
+            date: new Date()
+
+        });
+
+        await customer.save();
+            
+        } catch (error) {
+            if (customer) {
+                customer.walletBalance += shippingCharge;
+
+                customer.walletTransactions.unshift({
+                    amount: shippingCharge,
+                    type: "credit",
+                    message: "Refund - Shipment Booking Failed",
+                    date: new Date()
+                });
+                await customer.save();
+            }
+        }
+
+        
+
         const waybill =
             response.data?.packages?.[0]?.waybill ||
             response.data?.packages?.[0]?.waybill_number;
@@ -103,6 +154,7 @@ exports.bookCustomerShipment = async (req, res) => {
             waybill,
             trackingId: waybill,
             shipment: newShipment,
+            walletBalance: customer.walletBalance
         });
     } catch (error) {
         console.log(
