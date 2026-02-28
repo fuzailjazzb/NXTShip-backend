@@ -26,13 +26,13 @@ app.use("/api/shipment", shipmentRoutes);
 app.use("/api/customer", customerRoutes);
 app.use("/api/customers", require("./routes/customerRoutes"));
 app.use("/api/customer/auth", require("./routes/customerAuthRoutes"));
-// app.use("/api/customer/shipment", require("./routes/customerShipmentRoutes"));
+app.use("/api/customer/shipment", require("./routes/customerShipmentRoutes"));
 app.use("/api/wallet", walletRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/customer", require("./routes/reportRoutes"));
 app.use("/api/resources", require("./routes/resourceRoutes"));
 app.use("/api/rate", require("./routes/rateRoutes"));
-app.use("/api/customer/shipment", customerBookingRoutes);
+app.use("/api/customer/shipment", require("./routes/customerBookingRoutes"));
 app.use("/api/commission", require("./routes/commissionRoutes"));
 
 
