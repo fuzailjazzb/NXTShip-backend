@@ -16,7 +16,7 @@ const ReferralEarning = require("../models/referralEarning");
 exports.bookCustomerShipment = async (req, res) => {
 
     console.log("Controller Started.....")
-    console.log("User From Middleware:", req.user);
+    console.log("User From Middleware:", req.customer || req.customerId);
     console.log("Request Body:", req.body);
 
   try {
