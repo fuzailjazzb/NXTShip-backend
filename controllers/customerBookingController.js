@@ -15,9 +15,15 @@ exports.bookCustomerShipment = async (req, res) => {
     console.log("🚀 Customer Shipment Booking Started");
 
     const shipmentData = req.body;
-    const customerId = req.user.id;
+    
+    if (!req.user || !req.user._id){
+        return res.status(401).json({
+            success: false,
+            message: "unauthorized usersss"
+        });
+    }
 
-    shipmentData.customerId = customerId;
+    shipmentData.customerId = req.user._id;
 
     /* =====================================================
        1️⃣ GET CUSTOMER + WALLET CHECK
