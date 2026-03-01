@@ -13,6 +13,12 @@ const shipmentSchema = new mongoose.Schema(
       unique: true,
     },
 
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true
+    },
+
     paymentMode: {
       type: String,
       default: "Prepaid",
@@ -57,6 +63,7 @@ const shipmentSchema = new mongoose.Schema(
       type: String,
       default: "Pending",
     },
+
 
   },
   { timestamps: true }
