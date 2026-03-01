@@ -194,7 +194,15 @@ exports.bookCustomerShipment = async (req, res) => {
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.[0]?.waybill_number;
 
+      if (response.data?.packages?.[0]?.serviceable === false) {
+        return res.status(400).json({
+            success: false,
+            message: "Delhivery not serviceable for this pin code"
+        });
+      };
+
     console.log("📦 Waybill Extracted:", waybill);
+
 
     if (!waybill) {
       console.log("❌ No Waybill Received");
