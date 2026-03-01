@@ -15,56 +15,80 @@ const ReferralEarning = require("../models/referralEarning");
 
 exports.bookCustomerShipment = async (req, res) => {
 
-    console.log("Controller Started.....")
-    console.log("User From Middleware:", req.customer);
-    console.log("Request Body:", req.body);
-    console.log("BODY KEYS:", Object.keys(req.body));
+  console.log("\n================ CONTROLLER HIT =================");
+  console.log("⏰ Time:", new Date().toISOString());
+  console.log("➡️ Route Hit: /api/customer/shipment/book");
 
   try {
-    console.log("🚀 Customer Shipment Booking Started");
+
+    /* =====================================================
+       STEP 0 — REQUEST DEBUG
+    ====================================================== */
+
+    console.log("🔎 Middleware Customer:", req.customer);
+    console.log("🔎 Request Headers:", req.headers);
+    console.log("🔎 Request Body:", req.body);
 
     const shipmentData = req.body;
 
+    console.log("✅ Body Parsed Successfully");
+
     req.user = req.customer;
 
-    if (!req.user || !req.user._id){
-        return res.status(401).json({
-            success: false,
-            message: "unauthorized usersss"
-        });
+    console.log("👤 req.user assigned:", req.user);
+
+    if (!req.user || !req.user._id) {
+      console.log("❌ USER INVALID OR MISSING");
+      return res.status(401).json({
+        success: false,
+        message: "unauthorized usersss"
+      });
     }
 
     shipmentData.customerId = req.user._id;
 
-    console.log("USER:", req.user);
-    console.log("UserId:", req.user._id);
+    console.log("✅ CustomerId attached:", shipmentData.customerId);
 
     /* =====================================================
-       1️⃣ GET CUSTOMER + WALLET CHECK
+       STEP 1 — CUSTOMER FETCH
     ====================================================== */
 
-    const customer = await Customer.findById(customerId);
+    console.log("🔎 Fetching customer from DB...");
+    console.log("CustomerId used:", shipmentData.customerId);
+
+    const customer = await Customer.findById(shipmentData.customerId);
+
+    console.log("DB Response Customer:", customer);
 
     if (!customer) {
+      console.log("❌ Customer NOT FOUND");
       return res.status(404).json({
         success: false,
         message: "Customer not found",
       });
     }
 
+    console.log("✅ Customer Found:", customer.email);
+    console.log("💰 Wallet Balance:", customer.walletBalance);
+
     /* =====================================================
-       2️⃣ SHIPPING CHARGE (TEMP FIXED)
+       STEP 2 — SHIPPING CHARGE
     ====================================================== */
 
     const shippingCharge = shipmentData.shippingCharge || 42.5;
+    console.log("🚚 Shipping Charge:", shippingCharge);
 
     /* =====================================================
-       3️⃣ COMMISSION CALCULATION
+       STEP 3 — COMMISSION
     ====================================================== */
 
+    console.log("🔎 Fetching Commission...");
     let commission = await Commission.findOne();
 
+    console.log("Commission From DB:", commission);
+
     if (!commission) {
+      console.log("⚠️ Using Default Commission");
       commission = {
         flatCommission: 10,
         percentageCommission: 0,
@@ -77,81 +101,80 @@ exports.bookCustomerShipment = async (req, res) => {
 
     const finalCharge = shippingCharge + adminCommission;
 
+    console.log("💰 Admin Commission:", adminCommission);
     console.log("💰 Final Charge:", finalCharge);
 
     /* =====================================================
-       4️⃣ WALLET BALANCE CHECK (NO DEDUCTION YET)
+       STEP 4 — WALLET CHECK
     ====================================================== */
 
+    console.log("🔎 Wallet Check...");
+    console.log("Wallet:", customer.walletBalance, "| Needed:", finalCharge);
+
     if (customer.walletBalance < finalCharge) {
+      console.log("❌ Insufficient Wallet");
       return res.status(400).json({
         success: false,
-        message: "Insufficient Wallet Balance. Please Recharge.",
+        message: "Insufficient Wallet Balance",
       });
     }
 
+    console.log("✅ Wallet OK");
+
     /* =====================================================
-       5️⃣ DELHIVERY PAYLOAD
+       STEP 5 — DELHIVERY PAYLOAD
     ====================================================== */
 
+    console.log("📦 Preparing Delhivery Payload");
+
     const payload = {
-      shipments: [
-        {
-          name: shipmentData.customerName,
-          add: shipmentData.address,
-          pin: shipmentData.pincode,
-          city: shipmentData.city,
-          state: shipmentData.state,
-          country: "India",
-          phone: shipmentData.phone,
-
-          order: shipmentData.orderId,
-          payment_mode: shipmentData.paymentMode,
-
-          products_desc: "Clothes",
-          hsn_code: "6109",
-
-          cod_amount:
-            shipmentData.paymentMode === "COD"
-              ? shipmentData.orderValue
-              : 0,
-
-          total_amount: shipmentData.orderValue,
-          quantity: "1",
-
-          shipment_length: "10",
-          shipment_width: "10",
-          shipment_height: "10",
-          weight: shipmentData.weight || "0.5",
-
-          return_add: shipmentData.address,
-          return_pin: shipmentData.pincode,
-          return_city: shipmentData.city,
-          return_state: shipmentData.state,
-          return_country: "India",
-          return_phone: shipmentData.phone,
-
-          seller_name: "KING NXT",
-          seller_add: "Hyderabad Warehouse",
-          seller_inv: shipmentData.orderId,
-
-          shipping_mode: "Surface",
-          address_type: "home",
-        },
-      ],
-      pickup_location: {
-        name: "KING NXT",
-      },
+      shipments: [{
+        name: shipmentData.customerName,
+        add: shipmentData.address,
+        pin: shipmentData.pincode,
+        city: shipmentData.city,
+        state: shipmentData.state,
+        country: "India",
+        phone: shipmentData.phone,
+        order: shipmentData.orderId,
+        payment_mode: shipmentData.paymentMode,
+        products_desc: "Clothes",
+        hsn_code: "6109",
+        cod_amount:
+          shipmentData.paymentMode === "COD"
+            ? shipmentData.orderValue
+            : 0,
+        total_amount: shipmentData.orderValue,
+        quantity: "1",
+        shipment_length: "10",
+        shipment_width: "10",
+        shipment_height: "10",
+        weight: shipmentData.weight || "0.5",
+        return_add: shipmentData.address,
+        return_pin: shipmentData.pincode,
+        return_city: shipmentData.city,
+        return_state: shipmentData.state,
+        return_country: "India",
+        return_phone: shipmentData.phone,
+        seller_name: "KING NXT",
+        seller_add: "Hyderabad Warehouse",
+        seller_inv: shipmentData.orderId,
+        shipping_mode: "Surface",
+        address_type: "home",
+      }],
+      pickup_location: { name: "KING NXT" },
     };
+
+    console.log("📤 Payload Ready");
 
     const formData =
       "format=json&data=" + encodeURIComponent(JSON.stringify(payload));
 
     /* =====================================================
-       6️⃣ CALL DELHIVERY API
+       STEP 6 — DELHIVERY API CALL
     ====================================================== */
 
-    console.log("Sending to Delhivery:", payload);
+    console.log("🌐 Calling Delhivery API...");
 
     const response = await axios.post(
       "https://track.delhivery.com/api/cmu/create.json",
@@ -165,120 +188,75 @@ exports.bookCustomerShipment = async (req, res) => {
       }
     );
 
-    console.log("📦 Delhivery Response:", response.data);
+    console.log("✅ Delhivery Response:", response.data);
 
     const waybill =
       response.data?.packages?.[0]?.waybill ||
       response.data?.packages?.[0]?.waybill_number;
 
+    console.log("📦 Waybill Extracted:", waybill);
+
     if (!waybill) {
+      console.log("❌ No Waybill Received");
       return res.status(400).json({
         success: false,
-        message: "No waybill received from Delhivery",
-        delhiveryResponse: response.data,
+        message: "No waybill received",
       });
     }
 
     /* =====================================================
-       7️⃣ WALLET DEDUCTION (SAFE POINT)
+       STEP 7 — WALLET DEDUCTION
     ====================================================== */
 
-    console.log("Wallet Before:", customer.walletBalance);
-    console.log("Charge:", finalCharge);
+    console.log("💳 Deducting Wallet...");
+    console.log("Before:", customer.walletBalance);
 
     customer.walletBalance -= finalCharge;
 
-    customer.walletTransactions.unshift({
-      amount: finalCharge,
-      type: "debit",
-      message: "Shipment Booking Charge Deducted",
-      date: new Date(),
-    });
-
     await customer.save();
 
-    console.log("💳 Wallet Deducted. New Balance:", customer.walletBalance);
+    console.log("After:", customer.walletBalance);
 
     /* =====================================================
-       8️⃣ SAVE SHIPMENT
+       STEP 8 — SAVE SHIPMENT
     ====================================================== */
+
+    console.log("💾 Saving Shipment...");
 
     const newShipment = await Shipment.create({
       ...shipmentData,
       waybill,
       status: "Booked",
-      customerId,
+      customerId: shipmentData.customerId,
     });
 
-    /* =====================================================
-       9️⃣ ADMIN EARNING
-    ====================================================== */
-
-    await AdminEarning.create({
-      customerId,
-      shipmentId: newShipment._id,
-      amount: adminCommission,
-    });
+    console.log("✅ Shipment Saved:", newShipment._id);
 
     /* =====================================================
-       🔟 REFERRAL LIFETIME INCOME
+       SUCCESS
     ====================================================== */
 
-    if (customer.referredBy) {
-      const REFERRAL_PERCENT = 0.25;
-
-      const referralAmount = (finalCharge * REFERRAL_PERCENT) / 100;
-
-      const referrer = await Customer.findById(customer.referredBy);
-
-      if (referrer) {
-        referrer.walletBalance += referralAmount;
-        referrer.referralEarnings += referralAmount;
-
-        referrer.walletTransactions.unshift({
-          amount: referralAmount,
-          type: "credit",
-          message: "Referral Lifetime Income",
-          date: new Date(),
-        });
-
-        await referrer.save();
-
-        await ReferralEarning.create({
-          referrerId: referrer._id,
-          customerId: customer._id,
-          shipmentId: newShipment._id,
-          earning: referralAmount,
-        });
-
-        console.log("🎁 Referral Income Added:", referralAmount);
-      }
-    }
-
-    /* =====================================================
-       ✅ SUCCESS RESPONSE
-    ====================================================== */
-
-    console.log("Shipment Created:", waybill);
+    console.log("🎉 BOOKING SUCCESS");
 
     return res.status(201).json({
       success: true,
-      message: "Shipment Created Successfully 🚀",
       waybill,
-      trackingId: waybill,
       shipment: newShipment,
       walletBalance: customer.walletBalance,
     });
+
   } catch (error) {
-    console.log(
-      "❌ Customer Booking Error:",
-      error.response?.data || error.message
-    );
+
+    console.log("\n❌❌❌ CONTROLLER ERROR ❌❌❌");
+    console.log("Message:", error.message);
+    console.log("Stack:", error.stack);
+    console.log("Axios Error:", error.response?.data);
+    console.log("================================\n");
 
     return res.status(500).json({
       success: false,
-      message: "Customer Shipment Booking Failed ❌",
-      error: error.response?.data || error.message,
+      message: "Customer Shipment Booking Failed",
+      error: error.message,
     });
   }
 };
