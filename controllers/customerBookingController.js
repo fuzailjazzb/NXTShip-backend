@@ -14,6 +14,11 @@ const ReferralEarning = require("../models/referralEarning");
 
 
 exports.bookCustomerShipment = async (req, res) => {
+
+    console.log("Controller Started.....")
+    console.log("User From Middleware:", req.user);
+    console.log("Request Body:", req.body);
+
   try {
     console.log("🚀 Customer Shipment Booking Started");
 
@@ -143,6 +148,8 @@ console.log("UserId:", req.user._id);
        6️⃣ CALL DELHIVERY API
     ====================================================== */
 
+    console.log("Sending to Delhivery:", payload);
+
     const response = await axios.post(
       "https://track.delhivery.com/api/cmu/create.json",
       formData,
@@ -172,6 +179,9 @@ console.log("UserId:", req.user._id);
     /* =====================================================
        7️⃣ WALLET DEDUCTION (SAFE POINT)
     ====================================================== */
+
+    console.log("Wallet Before:", customer.walletBalance);
+    console.log("Charge:", finalCharge);
 
     customer.walletBalance -= finalCharge;
 
@@ -245,6 +255,8 @@ console.log("UserId:", req.user._id);
     /* =====================================================
        ✅ SUCCESS RESPONSE
     ====================================================== */
+
+    console.log("Shipment Created:", waybill);
 
     return res.status(201).json({
       success: true,

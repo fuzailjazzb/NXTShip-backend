@@ -18,6 +18,17 @@ app.use(cors({
 }));
 
 // Routes
+
+app.use((req, res, next) => {
+  console.log("========================================================================");
+  console.log("Incoming Request");
+  console.log("Method:", req.method);
+  console.log("URL:", req.originalUrl);
+  console.log("Headers Authorization:", req.headers.authorization);
+  console.log("Time:", new Date().toISOString());
+  console.log("========================================================================");
+})
+
 app.get("/", (req, res) => {
   res.send("Welcome to the Shipment Tracking API 🚀");
 });

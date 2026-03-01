@@ -8,8 +8,18 @@ exports.customerAuth = async (req, res, next) => {
     // Token check
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ No Token Provided");
+    console.log("Raw Authorization Header:", authHeader);
+
+    if (!authHeader) {
+      console.log("❌ No TAuthorization Header");
+      return res.status(401).json({
+        success: false,
+        message: "No token provided",
+      });
+    }
+
+    if (!authHeader.startsWith("Bearer ")) {
+      console.log("❌ Bearer Missing");
       return res.status(401).json({
         success: false,
         message: "No token provided",
@@ -29,8 +39,10 @@ exports.customerAuth = async (req, res, next) => {
     // Find customer from DB
     const customer = await Customer.findById(decoded.id).select("-password");
 
+    console.log("DB Customer Found:", customer ? customer.email: "NOT FOUND");
+
     if (!customer) {
-      console.log("❌ Customer not found");
+      console.log("❌ Customer not found in DB");
       return res.status(401).json({
         success: false,
         message: "Customer not found",
@@ -40,7 +52,7 @@ exports.customerAuth = async (req, res, next) => {
     // Attach customer to request
     req.customer = customer;
 
-    console.log("✅ Customer Authenticated:", customer.email);
+    console.log("✅ Customer Authenticated Successfully:", customer.email);
 
     next();
   } catch (error) {
