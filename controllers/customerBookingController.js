@@ -16,13 +16,15 @@ const ReferralEarning = require("../models/referralEarning");
 exports.bookCustomerShipment = async (req, res) => {
 
     console.log("Controller Started.....")
-    console.log("User From Middleware:", req.customerId);
+    console.log("User From Middleware:", req.customer);
     console.log("Request Body:", req.body);
 
   try {
     console.log("🚀 Customer Shipment Booking Started");
 
     const shipmentData = req.body;
+
+    req.user = req.customer;
 
     if (!req.user || !req.user._id){
         return res.status(401).json({
