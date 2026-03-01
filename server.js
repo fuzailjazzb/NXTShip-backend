@@ -27,6 +27,8 @@ app.use((req, res, next) => {
   console.log("Headers Authorization:", req.headers.authorization);
   console.log("Time:", new Date().toISOString());
   console.log("========================================================================");
+
+  next();
 })
 
 app.get("/", (req, res) => {
