@@ -47,6 +47,7 @@ app.use("/api/resources", require("./routes/resourceRoutes"));
 app.use("/api/rate", require("./routes/rateRoutes"));
 app.use("/api/customer/shipment", require("./routes/customerBookingRoutes"));
 app.use("/api/commission", require("./routes/commissionRoutes"));
+app.use("/api/customer", require("./routes/customerTrackingRoutes"));
 
 
 
