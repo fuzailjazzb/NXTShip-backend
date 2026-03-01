@@ -138,7 +138,7 @@ exports.bookCustomerShipment = async (req, res) => {
                 phone: shipmentData.phone,
                 order: shipmentData.orderId,
                 payment_mode: shipmentData.paymentMode,
-                products_desc: "Clothes",
+                products_desc: shipmentData.productName || "CGeneral Item",
                 hsn_code: "6109",
                 cod_amount:
                     shipmentData.paymentMode === "COD"

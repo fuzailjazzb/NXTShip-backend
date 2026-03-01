@@ -13,6 +13,11 @@ const shipmentSchema = new mongoose.Schema(
       unique: true,
     },
 
+    productName: {
+      type: String,
+      required: true
+    },
+
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",
