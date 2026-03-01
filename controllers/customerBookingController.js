@@ -10,7 +10,7 @@ const ReferralEarning = require("../models/referralEarning");
  * Customer creates shipment using wallet balance
  */
 
-
+console.log("BODY KEYS:", Object.keys(req.body));
 
 
 exports.bookCustomerShipment = async (req, res) => {
@@ -36,7 +36,7 @@ exports.bookCustomerShipment = async (req, res) => {
     shipmentData.customerId = req.user._id;
 
     console.log("USER:", req.user);
-console.log("UserId:", req.user._id);
+    console.log("UserId:", req.user._id);
 
     /* =====================================================
        1️⃣ GET CUSTOMER + WALLET CHECK
