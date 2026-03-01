@@ -250,7 +250,10 @@ exports.bookCustomerShipment = async (req, res) => {
 
         return res.status(201).json({
             success: true,
+            message: "Shipment Created Successfully",
             waybill,
+            trackingId: shipmentData.orderId,
+            orderId: shipmentData.orderId,
             shipment: newShipment,
             walletBalance: customer.walletBalance,
         });
