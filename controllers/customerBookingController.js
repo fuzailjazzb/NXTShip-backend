@@ -10,7 +10,7 @@ const ReferralEarning = require("../models/referralEarning");
  * Customer creates shipment using wallet balance
  */
 
-console.log("BODY KEYS:", Object.keys(req.body));
+
 
 
 exports.bookCustomerShipment = async (req, res) => {
@@ -18,6 +18,7 @@ exports.bookCustomerShipment = async (req, res) => {
     console.log("Controller Started.....")
     console.log("User From Middleware:", req.customer);
     console.log("Request Body:", req.body);
+    console.log("BODY KEYS:", Object.keys(req.body));
 
   try {
     console.log("🚀 Customer Shipment Booking Started");
