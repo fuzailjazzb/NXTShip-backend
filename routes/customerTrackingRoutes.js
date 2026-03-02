@@ -13,6 +13,6 @@ const {
 router.get("/shipments", customerAuth, getCustomerShipments);
 
 // Track
-router.get("/track/:id", customerAuth, trackShipment);
+router.get("/track/:id", trackShipment);
 
 module.exports = router;
