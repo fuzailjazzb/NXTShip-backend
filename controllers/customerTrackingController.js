@@ -38,61 +38,158 @@ exports.getCustomerShipments = async (req, res) => {
  * ============================================
  */
 exports.trackShipment = async (req, res) => {
+
+  console.log("🚀 Tracking API Hit");
+
   try {
-    const id = req.params.id;
+    const trackingInput = req.params.id;
 
-    console.log("🔎 Tracking Request:", id);
-    console.log("User:", req.customer);
+    /* =========================
+       1️⃣ FIND SHIPMENT
+    ========================= */
 
-    // 1️⃣ DB SEARCH
-    const shipment = await Shipment.findOne({
-      $or: [{ orderId: id }, { waybill: id }],
-      customerId: req.customer._id,
-    });
+    let shipment;
+
+    if (trackingInput.startsWith("ORD-")) {
+      shipment = await Shipment.findOne({ orderId: trackingInput });
+    } else {
+      shipment = await Shipment.findOne({ waybill: trackingInput });
+    }
 
     if (!shipment) {
-      console.log("❌ Shipment Not Found");
       return res.status(404).json({
-        success: false,
-        message: "Shipment not found",
+        success:false,
+        message:"Shipment not found"
       });
     }
 
-    console.log("✅ Shipment Found:", shipment.waybill);
+    /* =========================
+       2️⃣ DELHIVERY TRACK API
+    ========================= */
 
-    // 2️⃣ DELHIVERY LIVE TRACK
-    let liveTracking = null;
+    let liveTracking=null;
 
-    try {
+    try{
       const response = await axios.get(
         `https://track.delhivery.com/api/v1/packages/json/?waybill=${shipment.waybill}`,
         {
-          headers: {
-            Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
+          headers:{
+            Authorization:`Token ${process.env.DELHIVERY_TOKEN}`
           },
+          timeout:5000
         }
       );
 
-      console.log("📡 Delhivery Response Received");
+      liveTracking=response.data;
 
-      liveTracking =
-        response.data?.ShipmentData?.[0]?.Shipment || null;
-    } catch (apiErr) {
-      console.log("⚠️ Delhivery API Error:", apiErr.message);
+      console.log("✅ Live tracking received");
+
+    }catch(err){
+      console.log("⚠️ Using DB fallback tracking");
     }
 
-    // 3️⃣ RETURN MERGED DATA
-    res.status(200).json({
-      success: true,
-      shipment,
-      liveTracking,
-    });
-  } catch (err) {
-    console.log("🔥 Tracking Controller Error:", err.message);
+    const shipmentLive =
+      liveTracking?.ShipmentData?.[0]?.Shipment || {};
 
-    res.status(500).json({
-      success: false,
-      message: "Tracking Failed",
+    const currentStatus =
+      shipmentLive?.Status?.Status ||
+      shipment.status ||
+      "Booked";
+
+    /* =========================
+       3️⃣ TIMELINE BUILD
+    ========================= */
+
+    const scans = shipmentLive?.Scans || [];
+
+    const timeline = scans.length
+      ? scans.map(scan => ({
+          status: scan.ScanDetail?.Scan,
+          location: scan.ScanDetail?.ScannedLocation,
+          time: scan.ScanDetail?.ScanDateTime
+        }))
+      : [{
+          status: currentStatus,
+          location: shipment.city,
+          time: shipment.createdAt
+        }];
+
+    /* =========================
+       4️⃣ RIDER DETECTION LOGIC
+    ========================= */
+
+    let rider = {
+      name: "Not Assigned Yet",
+      phone: "Will be available on Out For Delivery",
+      available:false
+    };
+
+    // Find OFD scan
+    const ofdScan = scans.find(s =>
+      s.ScanDetail?.Scan?.toLowerCase().includes("out for delivery")
+    );
+
+    if (ofdScan) {
+      rider = {
+        name: "Delivery Partner",
+        phone:
+          shipmentLive?.Status?.Instructions ||
+          "Contact courier support",
+        available:true
+      };
+
+      console.log("🚴 Rider Assigned");
+    }
+
+    /* =========================
+       5️⃣ ETA CALCULATION
+    ========================= */
+
+    const createdDate=new Date(shipment.createdAt);
+    const etaDate=new Date(createdDate);
+    etaDate.setDate(createdDate.getDate()+3);
+
+    /* =========================
+       6️⃣ ROUTE STATIONS
+    ========================= */
+
+    const routeStations=[
+      "Pickup Warehouse",
+      "Origin Hub",
+      "Transit Hub",
+      "Destination Hub",
+      "Out For Delivery",
+      "Delivered"
+    ];
+
+    /* =========================
+       7️⃣ FINAL RESPONSE
+    ========================= */
+
+    return res.status(200).json({
+      success:true,
+      shipment:{
+        orderId:shipment.orderId,
+        waybill:shipment.waybill,
+        courier:"Delhivery",
+        status:currentStatus,
+        destination:shipment.city,
+        eta:etaDate.toDateString(),
+        timeline,
+        routeStations,
+        rider,
+        deliveryCompleted: currentStatus==="Delivered"
+      }
+    });
+
+  } catch(error){
+
+    console.log("❌ Tracking Error:",error.message);
+
+    return res.status(500).json({
+      success:false,
+      message:"Tracking Failed",
+      error:error.message
     });
   }
 };
