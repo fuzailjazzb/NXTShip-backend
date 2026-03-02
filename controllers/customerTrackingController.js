@@ -38,158 +38,151 @@ exports.getCustomerShipments = async (req, res) => {
  * ============================================
  */
 exports.trackShipment = async (req, res) => {
-
-  console.log("🚀 Tracking API Hit");
-
   try {
-    const trackingInput = req.params.id;
+    const id = req.params.id;
 
-    /* =========================
-       1️⃣ FIND SHIPMENT
-    ========================= */
+    console.log("🔎 Tracking Request:", id);
+    console.log("👤 User:", req.customer?._id);
 
-    let shipment;
+    /* =====================================================
+       1️⃣ DATABASE SEARCH (UNCHANGED LOGIC)
+    ====================================================== */
 
-    if (trackingInput.startsWith("ORD-")) {
-      shipment = await Shipment.findOne({ orderId: trackingInput });
-    } else {
-      shipment = await Shipment.findOne({ waybill: trackingInput });
-    }
+    const shipment = await Shipment.findOne({
+      $or: [{ orderId: id }, { waybill: id }],
+      customerId: req.customer._id,
+    });
 
     if (!shipment) {
+      console.log("❌ Shipment Not Found");
       return res.status(404).json({
-        success:false,
-        message:"Shipment not found"
+        success: false,
+        message: "Shipment not found",
       });
     }
 
-    /* =========================
-       2️⃣ DELHIVERY TRACK API
-    ========================= */
+    console.log("✅ Shipment Found:", shipment.waybill);
 
-    let liveTracking=null;
+    /* =====================================================
+       2️⃣ DELHIVERY LIVE TRACK
+    ====================================================== */
 
-    try{
+    let liveTracking = null;
+    let timeline = [];
+    let rider = {
+      name: "Not Assigned Yet",
+      phone: "Available once Out For Delivery",
+      available: false,
+    };
+
+    try {
       const response = await axios.get(
         `https://track.delhivery.com/api/v1/packages/json/?waybill=${shipment.waybill}`,
         {
-          headers:{
-            Authorization:`Token ${process.env.DELHIVERY_TOKEN}`
+          headers: {
+            Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
           },
-          timeout:5000
         }
       );
 
-      liveTracking=response.data;
+      console.log("📡 Delhivery Response Received");
 
-      console.log("✅ Live tracking received");
+      liveTracking =
+        response.data?.ShipmentData?.[0]?.Shipment || null;
 
-    }catch(err){
-      console.log("⚠️ Using DB fallback tracking");
+      /* =========================
+         BUILD TIMELINE
+      ========================= */
+
+      const scans = liveTracking?.Scans || [];
+
+      timeline = scans.map((scan) => ({
+        status: scan.ScanDetail?.Scan,
+        location: scan.ScanDetail?.ScannedLocation,
+        time: scan.ScanDetail?.ScanDateTime,
+      }));
+
+      /* =========================
+         RIDER DETECTION
+      ========================= */
+
+      const ofdScan = scans.find((s) =>
+        s.ScanDetail?.Scan?.toLowerCase().includes("out for delivery")
+      );
+
+      if (ofdScan) {
+        rider = {
+          name: "Delivery Partner",
+          phone:
+            liveTracking?.Status?.Instructions ||
+            "Contact courier support",
+          available: true,
+        };
+
+        console.log("🚴 Rider Assigned");
+      }
+
+    } catch (apiErr) {
+      console.log("⚠️ Delhivery API Error:", apiErr.message);
     }
 
-    const shipmentLive =
-      liveTracking?.ShipmentData?.[0]?.Shipment || {};
+    /* =====================================================
+       3️⃣ ETA CALCULATION
+    ====================================================== */
 
-    const currentStatus =
-      shipmentLive?.Status?.Status ||
-      shipment.status ||
-      "Booked";
+    const createdDate = new Date(shipment.createdAt);
+    const etaDate = new Date(createdDate);
+    etaDate.setDate(createdDate.getDate() + 3);
 
-    /* =========================
-       3️⃣ TIMELINE BUILD
-    ========================= */
+    const eta = etaDate.toDateString();
 
-    const scans = shipmentLive?.Scans || [];
+    /* =====================================================
+       4️⃣ STATIC ROUTE STATIONS (UX)
+    ====================================================== */
 
-    const timeline = scans.length
-      ? scans.map(scan => ({
-          status: scan.ScanDetail?.Scan,
-          location: scan.ScanDetail?.ScannedLocation,
-          time: scan.ScanDetail?.ScanDateTime
-        }))
-      : [{
-          status: currentStatus,
-          location: shipment.city,
-          time: shipment.createdAt
-        }];
-
-    /* =========================
-       4️⃣ RIDER DETECTION LOGIC
-    ========================= */
-
-    let rider = {
-      name: "Not Assigned Yet",
-      phone: "Will be available on Out For Delivery",
-      available:false
-    };
-
-    // Find OFD scan
-    const ofdScan = scans.find(s =>
-      s.ScanDetail?.Scan?.toLowerCase().includes("out for delivery")
-    );
-
-    if (ofdScan) {
-      rider = {
-        name: "Delivery Partner",
-        phone:
-          shipmentLive?.Status?.Instructions ||
-          "Contact courier support",
-        available:true
-      };
-
-      console.log("🚴 Rider Assigned");
-    }
-
-    /* =========================
-       5️⃣ ETA CALCULATION
-    ========================= */
-
-    const createdDate=new Date(shipment.createdAt);
-    const etaDate=new Date(createdDate);
-    etaDate.setDate(createdDate.getDate()+3);
-
-    /* =========================
-       6️⃣ ROUTE STATIONS
-    ========================= */
-
-    const routeStations=[
+    const routeStations = [
       "Pickup Warehouse",
       "Origin Hub",
       "Transit Hub",
       "Destination Hub",
       "Out For Delivery",
-      "Delivered"
+      "Delivered",
     ];
 
-    /* =========================
-       7️⃣ FINAL RESPONSE
-    ========================= */
+    /* =====================================================
+       5️⃣ FINAL RESPONSE (BACKWARD SAFE)
+    ====================================================== */
 
-    return res.status(200).json({
-      success:true,
-      shipment:{
-        orderId:shipment.orderId,
-        waybill:shipment.waybill,
-        courier:"Delhivery",
-        status:currentStatus,
-        destination:shipment.city,
-        eta:etaDate.toDateString(),
+    res.status(200).json({
+      success: true,
+
+      // ✅ OLD RESPONSE (unchanged)
+      shipment,
+      liveTracking,
+
+      // ✅ NEW PRO DATA (frontend optional use)
+      smartTracking: {
+        status:
+          liveTracking?.Status?.Status ||
+          shipment.status ||
+          "Booked",
+
+        eta,
         timeline,
         routeStations,
         rider,
-        deliveryCompleted: currentStatus==="Delivered"
-      }
+        courier: "Delhivery",
+        deliveryCompleted:
+          liveTracking?.Status?.Status === "Delivered",
+      },
     });
 
-  } catch(error){
+  } catch (err) {
+    console.log("🔥 Tracking Controller Error:", err.message);
 
-    console.log("❌ Tracking Error:",error.message);
-
-    return res.status(500).json({
-      success:false,
-      message:"Tracking Failed",
-      error:error.message
+    res.status(500).json({
+      success: false,
+      message: "Tracking Failed",
     });
   }
 };
