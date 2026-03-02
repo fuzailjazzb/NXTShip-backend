@@ -56,7 +56,7 @@ const customerSchema = new mongoose.Schema({
 
     pincode: {
         type: String,
-        required: true,
+        default: "",
     },
 
     referralCode: {
