@@ -130,55 +130,97 @@ exports.getDashboardShipments = async (req, res) => {
 */
 
 exports.getDashboardActivity = async (req, res) => {
+
     try {
+
+        // 1️⃣ Latest shipment find
         const shipment = await Shipment.findOne({
             customerId: req.customer._id
         }).sort({ createdAt: -1 });
 
         if (!shipment) {
+
             return res.json({
                 success: true,
-                activity: null
+                smartTracking: null,
+                message: "Shipment Not Found"
             });
+
         }
 
+        // 2️⃣ Waybill check
+        if (!shipment.waybill) {
+
+            return res.json({
+                success: true,
+                smartTracking: {
+                    status: shipment.status || "Booked",
+                    eta: null,
+                    timeline: [],
+                    routeStations: [],
+                    rider: null,
+                    courier: "Delhivery"
+                }
+            });
+
+        }
+
+        // 3️⃣ Delhivery API call
         const response = await axios.get(
             `https://track.delhivery.com/api/v1/packages/json/?waybill=${shipment.waybill}`,
             {
                 headers: {
-                    Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
-                },
+                    Authorization: `Token ${process.env.DELHIVERY_TOKEN}`
+                }
             }
         );
 
-        console.log("📡 Delhivery Response Received");
-
         const liveTracking =
-            response.data?.ShipmentData?.[0]?.Shipment;
+            response.data?.ShipmentData?.[0]?.Shipment || null;
 
+        // 4️⃣ Build response
         res.json({
+
             success: true,
+
             smartTracking: {
                 status:
                     liveTracking?.Status?.Status ||
                     shipment.status ||
                     "Booked",
 
-                eta,
-                timeline,
-                routeStations,
-                rider,
-                courier: "Delhivery",
-                deliveryCompleted:
-                    liveTracking?.Status?.Status === "Delivered",
-            },
-        })
+                eta: liveTracking?.ExpectedDeliveryDate || null,
 
+                timeline: liveTracking?.Scans || [],
 
-    }catch(err) {
-        console.log(err);
-        res.status(500).json({
-            success: false
+                routeStations: [
+                    "Warehouse",
+                    "Origin Hub",
+                    "Transit Hub",
+                    "Destination Hub",
+                    "Delivered"
+                ],
+
+                rider: {
+                    name: "Not Assigned",
+                    phone: "Available once Out For Delivery"
+                },
+
+                courier: "Delhivery"
+
+            }
+
         });
+
+    } catch (err) {
+
+        console.log("Dashboard Activity Error:", err);
+
+        res.status(500).json({
+            success: false,
+            message: "Activity failed"
+        });
+
     }
+
 };
