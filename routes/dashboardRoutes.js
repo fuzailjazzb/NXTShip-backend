@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { getDashboardSummary, getDashboardAnalytics } = require("../controllers/dashboardController");
-const recentShipment = require("../controllers/customerTrackingController")
+const { getDashboardSummary, getDashboardAnalytics, getDashboardShipments } = require("../controllers/dashboardController");
+
 
 const { customerAuth } = require("../middleware/customerAuth");
 
@@ -16,6 +16,6 @@ router.get("/summary", customerAuth, getDashboardSummary);
 
 router.get("/analytics", customerAuth, getDashboardAnalytics);
 
-router.get("/recent-shipments", customerAuth, recentShipment.getCustomerShipments);
+router.get("/recent-shipments", customerAuth, getDashboardShipments);
 
 module.exports = router;

@@ -95,16 +95,17 @@ exports.getDashboardAnalytics = async (req, res) => {
 =====================================
 */
 
-/* exports.getRecentShipments = async (req, res) => {
+ exports.getDashboardShipments = async (req, res) => {
   try {
 
     const customerId = req.customer._id;
 
     const shipments = await Shipment.find({ customerId })
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .select("orderId waybill city status createdAt");
 
-    res.json({
+    res.status(200).json({
       success: true,
       shipments
     });
@@ -118,4 +119,4 @@ exports.getDashboardAnalytics = async (req, res) => {
     });
   }
 };
-*/
+
