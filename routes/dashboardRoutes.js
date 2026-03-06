@@ -12,9 +12,9 @@ const customerAuth = require("../middleware/customerAuth");
 ==============================
 */
 
-router.get("/summary", customerAuth, getDashboardSummary);
+// router.get("/summary", customerAuth, getDashboardSummary);
 
-router.get("/analytics", customerAuth, getDashboardAnalytics);
+// router.get("/analytics", customerAuth, getDashboardAnalytics);
 
 router.get("/recent-shipments", customerAuth, recentShipment.getCustomerShipments);
 
