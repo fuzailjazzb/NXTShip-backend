@@ -9,6 +9,7 @@ const customerRoutes = require("./routes/customerRoutes");
 const supportRoutes = require("./routes/supportRoutes");
 const customerBookingRoutes = require("./routes/customerBookingRoutes");
 const walletRoutes = require("./routes/walletRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 app.use(express.json());
@@ -48,6 +49,7 @@ app.use("/api/rate", require("./routes/rateRoutes"));
 app.use("/api/customer/shipment", require("./routes/customerBookingRoutes"));
 app.use("/api/commission", require("./routes/commissionRoutes"));
 app.use("/api/customer", require("./routes/customerTrackingRoutes"));
+app.use("/api/dashboard", dashboardRoutes);
 
 
 
