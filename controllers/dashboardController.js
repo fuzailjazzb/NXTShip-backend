@@ -148,14 +148,15 @@ exports.getDashboardActivity = async (req, res) => {
                     timeline: [],
                     routeStations: [],
                     rider: null,
-                    courier: null || "Delhivery"
+                    courier: "Delhivery"
                 }
             });
 
         }
+
         console.log("Latest Shipment:", shipment.waybill);
 
-        // 3️⃣ Delhivery API call
+        // 2️⃣ Delhivery API call
         const response = await axios.get(
             `https://track.delhivery.com/api/v1/packages/json/?waybill=${shipment.waybill}`,
             {
@@ -168,13 +169,12 @@ exports.getDashboardActivity = async (req, res) => {
         const liveTracking =
             response.data?.ShipmentData?.[0]?.Shipment || null;
 
-        // Extract Shipment Tracking Data
         if (!liveTracking) {
 
             return res.json({
                 success: true,
                 smartTracking: {
-                    status: shipment.status || "Booked",
+                    status: { status: shipment.status || "Booked" },
                     eta: null,
                     timeline: [],
                     routeStations: [],
@@ -185,19 +185,25 @@ exports.getDashboardActivity = async (req, res) => {
 
         }
 
-        // 4️⃣ Build Timeline
-
+        // 3️⃣ Build Timeline
         const scans = liveTracking?.Scans || [];
 
         const timeline = scans.map((scan) => ({
-            status: scan.ScanDetail?.Scan,
-            location: scan.ScanDetail?.ScannedLocation,
-            time: scan.ScanDetail?.ScanDateTime,
+            status: scan.ScanDetail?.Scan || "Unknown",
+            location: scan.ScanDetail?.ScanLocation || "",
+            time: scan.ScanDetail?.ScanDateTime || "",
         }));
+
 
         /* =========================
            RIDER DETECTION
         ========================= */
+
+        let rider = {
+            name: "Not Assigned",
+            phone: null,
+            available: false
+        };
 
         const ofdScan = scans.find((s) =>
             s.ScanDetail?.Scan?.toLowerCase().includes("out for delivery")
@@ -215,65 +221,69 @@ exports.getDashboardActivity = async (req, res) => {
             console.log("🚴 Rider Assigned");
         }
 
-    
 
-    /* =====================================================
-       3️⃣ ETA CALCULATION
-    ====================================================== */
+        /* =========================
+           ETA CALCULATION
+        ========================= */
 
-    const createdDate = new Date(shipment.createdAt);
-    const etaDate = new Date(createdDate);
-    etaDate.setDate(createdDate.getDate() + 3);
+        const createdDate = new Date(shipment.createdAt);
+        const etaDate = new Date(createdDate);
+        etaDate.setDate(createdDate.getDate() + 3);
 
-    const eta = etaDate.toDateString();
+        const eta = etaDate.toDateString();
 
-    /* =====================================================
-       4️⃣ STATIC ROUTE STATIONS (UX)
-    ====================================================== */
 
-    const routeStations = [
-        "Pickup Warehouse",
-        "Origin Hub",
-        "Transit Hub",
-        "Destination Hub",
-        "Out For Delivery",
-        "Delivered",
-    ];
+        /* =========================
+           STATIC ROUTE
+        ========================= */
 
-    /* =====================================================
-       5️⃣ FINAL RESPONSE (BACKWARD SAFE)
-    ====================================================== */
+        const routeStations = [
+            "Pickup Warehouse",
+            "Origin Hub",
+            "Transit Hub",
+            "Destination Hub",
+            "Out For Delivery",
+            "Delivered",
+        ];
 
-    res.status(200).json({
-        success: true,
 
-        // ✅ OLD RESPONSE (unchanged)
-        shipment,
-        liveTracking,
+        /* =========================
+           FINAL RESPONSE
+        ========================= */
 
-        // ✅ NEW PRO DATA (frontend optional use)
-        smartTracking: {
-            status:
-                liveTracking?.Status?.Status ||
-                shipment.status ||
-                "Booked",
+        res.status(200).json({
+            success: true,
 
-            eta,
-            timeline,
-            routeStations,
-            rider,
-            courier: "Delhivery",
-            deliveryCompleted:
-                liveTracking?.Status?.Status === "Delivered",
-        },
-    });
+            shipment,
+            liveTracking,
 
-} catch (err) {
-    console.log("🔥 Tracking Controller Error:", err.message);
+            smartTracking: {
+                status: {
+                    status:
+                        liveTracking?.Status?.Status ||
+                        shipment.status ||
+                        "Booked"
+                },
 
-    res.status(500).json({
-        success: false,
-        message: "Tracking Failed",
-    });
-}
+                eta,
+                timeline,
+                routeStations,
+                rider,
+                courier: "Delhivery",
+
+                deliveryCompleted:
+                    liveTracking?.Status?.Status === "Delivered",
+            },
+        });
+
+    } catch (err) {
+
+        console.log("🔥 Tracking Controller Error:", err);
+
+        res.status(500).json({
+            success: false,
+            message: "Tracking Failed",
+        });
+
+    }
 };
