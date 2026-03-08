@@ -135,37 +135,53 @@ exports.bookCustomerShipment = async (req, res) => {
                 city: shipmentData.city,
                 state: shipmentData.state,
                 country: "India",
+
                 phone: shipmentData.phone,
+                email: shipmentData.email || "",
+
                 order: shipmentData.orderId,
+
                 payment_mode: shipmentData.paymentMode,
-                products_desc: shipmentData.productName || "CGeneral Item",
-                hsn_code: "6109",
+
+                products_desc: shipmentData.productName || "General Item",
+                hsn_code: shipmentData.hsnCode || "6109",
                 cod_amount:
                     shipmentData.paymentMode === "COD"
                         ? shipmentData.orderValue
                         : 0,
+
                 total_amount: shipmentData.orderValue,
-                quantity: "1",
-                shipment_length: "10",
-                shipment_width: "10",
-                shipment_height: "10",
+
+                quantity: shipmentData.quantity || "1",
+
+                shipment_length:shipmentData.length || "10",
+                shipment_width:shipmentData.width || "10",
+                shipment_height:shipmentData.height || "10",
+
                 weight: shipmentData.weight || "0.5",
+
                 return_add: shipmentData.address,
                 return_pin: shipmentData.pincode,
                 return_city: shipmentData.city,
                 return_state: shipmentData.state,
                 return_country: "India",
                 return_phone: shipmentData.phone,
+
                 seller_name: "KING NXT",
                 seller_add: "Hyderabad Warehouse",
+
                 seller_inv: shipmentData.orderId,
                 shipping_mode: "Surface",
                 address_type: "home",
+
+                sku: shipmentData.sku || "SKU001",
+                order_channel: shipmentData.orderChannel || "Manual"
             }],
-            pickup_location: { name: "KING NXT" },
+            pickup_location: { name: shipmentData.pickupLocation || "KING NXT" },
         };
 
         console.log("📤 Payload Ready");
+        console.log(JSON.stringify(payload,null,2));
 
         const formData =
             "format=json&data=" + encodeURIComponent(JSON.stringify(payload));
