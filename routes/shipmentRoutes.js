@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
+const courierEngineController = require("../controllers/courierEngineController");
 const { bookShipment, getAllShipments, trackShipment, delhiveryTracking, checkPinSrvice, cancelShipment } = require("../controllers/shipmentController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
 // ✅ Create Shipment Route
-router.post("/book", authMiddleware, bookShipment);
+router.post("/book", authMiddleware, courierEngineController.bookShipment);
 
 // ✅ Fetch All Shipments Route
 router.get("/all", authMiddleware, getAllShipments);
