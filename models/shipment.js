@@ -69,6 +69,11 @@ const shipmentSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    courier: {
+      type: String,
+      default: "Delhivery"
+    }
+
 
   },
   { timestamps: true }
