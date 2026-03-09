@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { bookCustomerShipment } = require("../controllers/customerBookingController");
+const courierEngineController = require("../controllers/courierEngineController");
 const { customerAuth } = require("../middleware/customerAuth");
 
 console.log(typeof bookCustomerShipment);
@@ -11,7 +11,7 @@ router.post("/book",
     (req, res, next) => {
         console.log("Shipment Route Hit.....");
         next();
-    },customerAuth, bookCustomerShipment);
+    },customerAuth, courierEngineController.bookShipment);
 
 
 
