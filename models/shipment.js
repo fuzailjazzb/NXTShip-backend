@@ -70,8 +70,7 @@ const shipmentSchema = new mongoose.Schema(
     },
 
     courier: {
-      type: String,
-      default: "Delhivery"
+      type: String
     }
 
 
