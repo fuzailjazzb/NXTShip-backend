@@ -12,6 +12,9 @@ router.post("/book", authMiddleware, courierEngineController.bookShipment);
 // ✅ Fetch All Shipments Route
 router.get("/all", authMiddleware, getAllShipments);
 
+// Recommended Route
+router.get("/courier/recommendation", authMiddleware, courierEngineController.getCourierRecommendations)
+
 // Track Shipment Route
 router.get("/track/:waybill", authMiddleware, trackShipment);
 
