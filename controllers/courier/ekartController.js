@@ -40,7 +40,7 @@ exports.bookEkartShipment = async (req, res) => {
         }
 
         const shipmentData = req.body;
-        const customerId = req.user._id;
+        const customerId = req.user._id || req.user.id;
 
         const customer = await Customer.findById(customerId);
 
