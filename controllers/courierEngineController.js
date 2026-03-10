@@ -88,7 +88,7 @@ exports.getCourierRecommendations = async (req, res) => {
 
         console.log("🚚 Getting courier recommendations");
 
-        const { pickupPincode, deliveryPincode, weight } = req.body;
+        const { fromPincode, toPincode, weight, paymentType } = req.body;
 
         let couriers = [];
 
@@ -97,7 +97,7 @@ exports.getCourierRecommendations = async (req, res) => {
 
         try {
 
-            const delhiveryRate = await calculateDelhiveryRate(pickupPincode, deliveryPincode, weight);
+            const delhiveryRate = await calculateDelhiveryRate(fromPincode, toPincode, weight, paymentType);
 
             couriers.push({
                 name: "Delhivery",
@@ -116,7 +116,7 @@ exports.getCourierRecommendations = async (req, res) => {
 
         try {
 
-            const ekartRate = await getEkartRate(pickupPincode, deliveryPincode, weight);
+            const ekartRate = await getEkartRate(fromPincode, toPincode, weight, paymentType);
 
             couriers.push({
                 name: "Ekart",
