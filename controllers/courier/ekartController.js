@@ -112,7 +112,7 @@ exports.bookEkartShipment = async (req, res) => {
 
             products_desc: shipmentData.product || "Parcel",
 
-            payment_mode: shipmentData.paymentMode || "Prepaid",
+            payment_mode: shipmentData.paymentMode && shipmentData.paymentMode.toUpperCase() === "COD" ? "COD" : "Prepaid",
 
             category_of_goods: "General",
 
