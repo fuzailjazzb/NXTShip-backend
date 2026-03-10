@@ -138,7 +138,7 @@ exports.bookEkartShipment = async (req, res) => {
                 country: "India",
                 name: shipmentData.customerName,
                 phone: shipmentData.phone ? parseInt(shipmentData.phone) : 9553281751,
-                pin: shipmentData.pincode
+                pin: shipmentData.pincode ? parseInt(shipmentData.pincode) : 500055
             }
 
         };
