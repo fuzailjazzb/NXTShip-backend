@@ -13,6 +13,14 @@ exports.bookEkartShipment = async (req, res) => {
         console.log("🚚 EKART BOOK SHIPMENT");
 
         const shipmentData = req.body;
+        if (!req.user || !req.user._id) {
+            console.log("req.user missing");
+            return res.status(401).json({
+                success: false,
+                message: "unauthorized user"
+            });
+        }
+
         const customerId = req.user._id;
 
         /* ==============================
@@ -75,7 +83,11 @@ exports.bookEkartShipment = async (req, res) => {
             }
         );
 
-        const token = tokenResponse.data.access_token;
+        const token = tokenResponse?.data?.access_token;
+
+        if (!token) {
+            throw new Error("Ekart token not recieved");
+        }
 
         /* ==============================
            CREATE SHIPMENT PAYLOAD
@@ -102,7 +114,11 @@ exports.bookEkartShipment = async (req, res) => {
             }
         );
 
-        const waybill = shipmentResponse.data.tracking_id;
+        const waybill = shipmentResponse?.data?.tracking_id;
+
+        if (!waybill) {
+            throw new Error("Waybill not recieved from Ekart");
+        }
 
         /* ==============================
            WALLET DEDUCT
