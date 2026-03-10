@@ -43,6 +43,7 @@ exports.getWarehouses = async (req, res) => {
 
     res.json({
         success: true,
+        message: "get warehouse success",
         warehouses
     });
 }catch(err){
