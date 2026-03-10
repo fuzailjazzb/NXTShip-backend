@@ -114,8 +114,10 @@ exports.updateWarehouse = async (req, res) => {
 
     } catch (err) {
 
+        console.log("Update warehouse error", err);
         res.status(500).json({
-            success: false
+            success: false,
+            message: err.message
         });
 
     }
