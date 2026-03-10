@@ -36,13 +36,20 @@ exports.createWarehouse = async (req, res) => {
 
 exports.getWarehouses = async (req, res) => {
 
+    try{
     const warehouses = await Warehouse.find({
-        userId: req.user._id
+        userId: req.admin._id
     });
 
     res.json({
         success: true,
         warehouses
     });
+}catch(err){
+    res.status(500).json({
+        success: false,
+        message: err.message
+    });
+}
 
 };
