@@ -7,6 +7,8 @@ const Commission = require("../../models/commission");
    GET EKART TOKEN
 ===================================================== */
 
+console.log("req user", req.user);
+
 const getEkartToken = async () => {
 
     const response = await axios.post(
