@@ -41,6 +41,7 @@ exports.getWarehouses = async (req, res) => {
         console.log("Warehouse Api Hiteds");
         console.log("req.admin =>", req.admin);
         console.log("req.user =>", req.user);
+        console.log("req.headers =>",req.headers);
 
         const userId = req.admin?._id || req.user?._id;
 
