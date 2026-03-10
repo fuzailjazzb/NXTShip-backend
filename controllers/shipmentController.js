@@ -96,7 +96,7 @@ exports.bookShipment = async (req, res) => {
 
     console.log("DELHIVERY RESPONSE:", response.data);
 
-    await createCustomerFromShipment(shipmentData);
+    
 
     // ✅ Waybill निकालो
     const waybill =
