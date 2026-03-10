@@ -4,8 +4,8 @@ exports.createWarehouse = async (req, res) => {
 
     try {
 
-        const warehouse = new Warehouse({
-            userId: req.user._id,
+        const warehouse = await Warehouse.create({
+            userId: req.user.id,
             name: req.body.name,
             address: req.body.address,
             city: req.body.city,
@@ -14,8 +14,6 @@ exports.createWarehouse = async (req, res) => {
             phone: req.body.phone
         });
 
-        await warehouse.save();
-
         res.json({
             success: true,
             warehouse
@@ -23,6 +21,7 @@ exports.createWarehouse = async (req, res) => {
 
     } catch (err) {
 
+        console.log("warehouse create error", err);
         res.status(500).json({
             success: false,
             message: err.message
@@ -36,7 +35,7 @@ exports.createWarehouse = async (req, res) => {
 
 exports.getWarehouses = async (req, res) => {
 
-    try{
+    try {
 
         console.log("Warehouse Api Hiteds");
         console.log("req.admin =>", req.admin);
@@ -53,22 +52,102 @@ exports.getWarehouses = async (req, res) => {
             });
         }
 
-    const warehouses = await Warehouse.find({ userId: userId });
+        const warehouses = await Warehouse.find({ userId: userId });
 
-    console.log("warehouses", warehouses);
+        console.log("warehouses", warehouses);
 
-    res.json({
-        success: true,
-        message: "get warehouse success",
-        warehouses
-    });
-}catch(err){
+        res.json({
+            success: true,
+            message: "get warehouse success",
+            warehouses
+        });
+    } catch (err) {
 
-    console.log("warehouse error", err);
-    res.status(500).json({
-        success: false,
-        message: err.message
-    });
-}
+        console.log("warehouse error", err);
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+
+};
+
+
+exports.deleteWarehouse = async (req, res) => {
+
+    try {
+
+        await Warehouse.findByIdAndDelete(req.params.id);
+
+        res.json({
+            success: true,
+            message: "Warehouse deleted"
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false
+        });
+
+    }
+
+};
+
+
+exports.updateWarehouse = async (req, res) => {
+
+    try {
+
+        const warehouse = await Warehouse.findByIdAndUpdate(
+
+            req.params.id,
+            req.body,
+            { new: true }
+
+        );
+
+        res.json({
+            success: true,
+            warehouse
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false
+        });
+
+    }
+
+};
+
+
+exports.setDefaultWarehouse = async (req, res) => {
+
+    try {
+
+        await Warehouse.updateMany(
+            { userId: req.user.id },
+            { isDefault: false }
+        );
+
+        await Warehouse.findByIdAndUpdate(
+            req.params.id,
+            { isDefault: true }
+        );
+
+        res.json({
+            success: true,
+            message: "Default warehouse set"
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false
+        });
+
+    }
 
 };
