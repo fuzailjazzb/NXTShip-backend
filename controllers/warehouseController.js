@@ -37,9 +37,25 @@ exports.createWarehouse = async (req, res) => {
 exports.getWarehouses = async (req, res) => {
 
     try{
-    const warehouses = await Warehouse.find({
-        userId: req.admin._id
-    });
+
+        console.log("Warehouse Api Hiteds");
+        console.log("req.admin =>", req.admin);
+        console.log("req.user =>", req.user);
+
+        const userId = req.admin?._id || req.user?._id;
+
+        console.log("userO=Id is", userId);
+
+        if (!userId) {
+            return res.status(500).json({
+                success: false,
+                message: "user not authenticated"
+            });
+        }
+
+    const warehouses = await Warehouse.find({ userId });
+
+    console.log("warehouses", warehouses);
 
     res.json({
         success: true,
@@ -47,6 +63,8 @@ exports.getWarehouses = async (req, res) => {
         warehouses
     });
 }catch(err){
+
+    console.log("warehouse error", err);
     res.status(500).json({
         success: false,
         message: err.message
