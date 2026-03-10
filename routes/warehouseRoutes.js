@@ -6,8 +6,10 @@ createWarehouse,
 getWarehouses
 } = require("../controllers/warehouseController");
 
-router.post("/warehouse",createWarehouse);
+const { customerAuth } = require('../middleware/customerAuth');
 
-router.get("/warehouse",getWarehouses);
+router.post("/warehouse", customerAuth, createWarehouse);
+
+router.get("/warehouse", customerAuth, getWarehouses);
 
 module.exports = router;
