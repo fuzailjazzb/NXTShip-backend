@@ -43,7 +43,7 @@ exports.getWarehouses = async (req, res) => {
         console.log("req.user =>", req.user);
         console.log("req.headers =>",req.headers);
 
-        const userId = req.admin?._id || req.user?._id;
+        const userId = req.admin || req.user;
 
         console.log("userO=Id is", userId);
 
