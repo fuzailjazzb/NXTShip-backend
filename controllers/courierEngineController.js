@@ -87,8 +87,14 @@ exports.getCourierRecommendations = async (req, res) => {
     try {
 
         console.log("🚚 Getting courier recommendations");
+        console.log("request body in courier engine", req.body);
 
         const { fromPincode, toPincode, weight, paymentType } = req.body;
+
+        console.log("fromPincode",fromPincode);
+        console.log("topincode", toPincode);
+        console.log("weight", weight);
+        console.log("payment type", paymentType);
 
         let couriers = [];
 
