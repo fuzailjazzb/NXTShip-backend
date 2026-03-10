@@ -29,31 +29,32 @@ exports.bookEkartShipment = async (req, res) => {
 
     try {
 
-        console.log("🚚 EKART BOOK SHIPMENT");
-        console.log("req user", req.user);
-
-        if (!req.user || req.user._id) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized usersa"
-            })
-        }
+        console.log("🚀 EKART BOOK SHIPMENT STARTED");
 
         const shipmentData = req.body;
+        console.log("📦 Shipment Data:", shipmentData);
+
         const customerId = req.user._id || req.user.id;
+        console.log("👤 Customer ID:", customerId);
 
         const customer = await Customer.findById(customerId);
+        console.log("👤 Customer DB Result:", customer);
 
         if (!customer) {
+            console.log("❌ CUSTOMER NOT FOUND");
             return res.status(404).json({
                 success: false,
                 message: "Customer not found"
             });
         }
 
+        console.log("💰 Wallet Balance:", customer.walletBalance);
+
         const shippingCharge = shipmentData.shippingCharge || 50;
+        console.log("🚚 Shipping Charge:", shippingCharge);
 
         let commission = await Commission.findOne();
+        console.log("💼 Commission Config:", commission);
 
         if (!commission) {
             commission = {
@@ -68,128 +69,86 @@ exports.bookEkartShipment = async (req, res) => {
 
         const finalCharge = shippingCharge + adminCommission;
 
+        console.log("💰 Final Charge:", finalCharge);
+
         if (customer.walletBalance < finalCharge) {
+
+            console.log("❌ WALLET LOW");
+
             return res.status(400).json({
                 success: false,
                 message: "Insufficient wallet balance"
             });
         }
 
-        const token = await getEkartToken();
+        console.log("🔑 REQUESTING EKART TOKEN");
+
+        const tokenResponse = await axios.post(
+            `${process.env.EKART_BASE_URL}/integrations/v2/auth/token/${process.env.EKART_CLIENT_ID}`,
+            {
+                username: process.env.EKART_USERNAME,
+                password: process.env.EKART_PASSWORD
+            }
+        );
+
+        console.log("🔑 TOKEN RESPONSE:", tokenResponse.data);
+
+        const token = tokenResponse.data.access_token;
+
+        console.log("📦 BUILDING EKART PAYLOAD");
 
         const payload = {
 
-            seller_name: shipmentData.sellerName || "Default Seller",
+            seller_name: process.env.EKART_SELLER_NAME,
+            seller_address: process.env.EKART_SELLER_ADDRESS,
+            seller_gst_tin: process.env.EKART_GST,
 
-            seller_address: shipmentData.sellerAddress || "Warehouse Address",
-
-            seller_gst_tin: shipmentData.sellerGst || "GST123",
-
-            seller_gst_amount: 0,
-
-            consignee_gst_amount: 0,
-
-            integrated_gst_amount: 0,
-
-            order_number: shipmentData.orderId,
-
-            invoice_number: shipmentData.invoiceNumber || shipmentData.orderId,
-
+            order_number: shipmentData.orderId || Date.now().toString(),
+            invoice_number: shipmentData.orderId || Date.now().toString(),
             invoice_date: new Date().toISOString().split("T")[0],
 
             consignee_name: shipmentData.customerName,
-
             consignee_alternate_phone: shipmentData.phone,
 
-            products_desc: shipmentData.product || "Product",
+            products_desc: shipmentData.product || "Parcel",
 
             payment_mode: shipmentData.paymentMode || "Prepaid",
 
-            category_of_goods: shipmentData.category || "General",
+            category_of_goods: "General",
 
             total_amount: shipmentData.amount || 1,
-
-            tax_value: shipmentData.tax || 0,
-
+            tax_value: 0,
             taxable_amount: shipmentData.amount || 1,
-
             commodity_value: String(shipmentData.amount || 1),
 
             cod_amount: shipmentData.codAmount || 0,
 
-            quantity: shipmentData.quantity || 1,
+            quantity: 1,
 
             weight: shipmentData.weight || 500,
-
-            length: shipmentData.length || 10,
-
-            height: shipmentData.height || 10,
-
-            width: shipmentData.width || 10,
+            length: 10,
+            height: 10,
+            width: 10,
 
             drop_location: {
-
                 location_type: "Home",
-
                 address: shipmentData.address,
-
                 city: shipmentData.city,
-
                 state: shipmentData.state,
-
                 country: "India",
-
                 name: shipmentData.customerName,
-
                 phone: shipmentData.phone,
-
                 pin: shipmentData.pincode
-
-            },
-
-            pickup_location: {
-
-                location_type: "Office",
-
-                address: shipmentData.pickupAddress || "Warehouse",
-
-                city: shipmentData.pickupCity || "Patna",
-
-                state: shipmentData.pickupState || "Bihar",
-
-                country: "India",
-
-                name: shipmentData.pickupName || "Warehouse",
-
-                phone: shipmentData.pickupPhone || "9999999999",
-
-                pin: shipmentData.pickupPincode || 800001
-
-            },
-
-            return_location: {
-
-                location_type: "Office",
-
-                address: shipmentData.pickupAddress || "Warehouse",
-
-                city: shipmentData.pickupCity || "Patna",
-
-                state: shipmentData.pickupState || "Bihar",
-
-                country: "India",
-
-                name: shipmentData.pickupName || "Warehouse",
-
-                phone: shipmentData.pickupPhone || "9999999999",
-
-                pin: shipmentData.pickupPincode || 800001
-
             }
 
         };
 
+        console.log("📦 EKART PAYLOAD:", JSON.stringify(payload, null, 2));
+
+        console.log("📡 SENDING SHIPMENT REQUEST");
+
         const shipmentResponse = await axios.put(
+
             `${process.env.EKART_BASE_URL}/api/v1/package/create`,
             payload,
             {
@@ -197,12 +156,19 @@ exports.bookEkartShipment = async (req, res) => {
                     Authorization: `Bearer ${token}`
                 }
             }
+
         );
+
+        console.log("📦 EKART RESPONSE:", shipmentResponse.data);
 
         const waybill = shipmentResponse.data.tracking_id;
 
+        console.log("📦 WAYBILL:", waybill);
+
         customer.walletBalance -= finalCharge;
         await customer.save();
+
+        console.log("💰 WALLET UPDATED:", customer.walletBalance);
 
         const newShipment = await Shipment.create({
 
@@ -213,6 +179,8 @@ exports.bookEkartShipment = async (req, res) => {
             status: "Booked"
 
         });
+
+        console.log("📦 SHIPMENT SAVED:", newShipment._id);
 
         return res.status(201).json({
 
@@ -226,7 +194,14 @@ exports.bookEkartShipment = async (req, res) => {
 
     } catch (error) {
 
-        console.log("EKART BOOK ERROR:", error.message);
+        console.log("❌ EKART FULL ERROR");
+
+        if (error.response) {
+            console.log("📡 EKART API ERROR:", error.response.data);
+            console.log("📡 STATUS:", error.response.status);
+        }
+
+        console.log("❌ MESSAGE:", error.message);
 
         return res.status(500).json({
             success: false,
