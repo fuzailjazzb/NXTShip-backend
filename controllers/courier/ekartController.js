@@ -384,3 +384,82 @@ exports.downloadEkartLabel = async (req, res) => {
     }
 
 };
+
+
+
+exports.getEkartRate = async (pickupPincode, deliveryPincode, weight) => {
+
+    try {
+
+        console.log("📦 Checking Ekart rate...");
+
+
+        // STEP 1 — GET EKART TOKEN
+        const tokenResponse = await axios.post(
+            `${process.env.EKART_BASE_URL}/integrations/v2/auth/token/${process.env.EKART_CLIENT_ID}`,
+            {
+                username: process.env.EKART_USERNAME,
+                password: process.env.EKART_PASSWORD
+            }
+        );
+
+        const token = tokenResponse.data.access_token;
+
+        console.log("✅ Ekart Token Received");
+
+
+        // STEP 2 — CHECK SERVICEABILITY
+        const serviceResponse = await axios.get(
+            `${process.env.EKART_BASE_URL}/integrations/v2/pincode/serviceability`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                params: {
+                    pickup_pincode: pickupPincode,
+                    delivery_pincode: deliveryPincode
+                }
+            }
+        );
+
+        const serviceData = serviceResponse.data;
+
+        console.log("📍 Ekart Service Response:", serviceData);
+
+
+        // STEP 3 — ESTIMATE DELIVERY DAYS
+        let deliveryDays = 3;
+
+        if (serviceData && serviceData.estimated_delivery_days) {
+            deliveryDays = serviceData.estimated_delivery_days;
+        }
+
+
+        // STEP 4 — CALCULATE PRICE (example logic)
+
+        let basePrice = 50;
+
+        if (weight > 1) {
+            basePrice += (weight - 1) * 10;
+        }
+
+
+        // RETURN RESULT
+
+        return {
+            price: basePrice,
+            estimatedDays: deliveryDays
+        };
+
+    } catch (error) {
+
+        console.log("❌ Ekart Rate Error:", error.response?.data || error.message);
+
+        return {
+            price: 0,
+            estimatedDays: null
+        };
+
+    }
+
+};

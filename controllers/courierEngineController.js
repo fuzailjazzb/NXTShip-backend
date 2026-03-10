@@ -1,5 +1,7 @@
 const { bookShipment: bookDelhiveryShipment } = require("./shipmentController");
 const { bookEkartShipment } = require("./courier/ekartController");
+const { getEkartRate } = require("./courier/ekartController");
+const { calculateDelhiveryRate } = require("./rateControllers");
 
 /* =====================================================
    COURIER ENGINE
@@ -21,13 +23,13 @@ exports.bookShipment = async (req, res) => {
            IF NO COURIER SELECTED
         ===================================================== */
 
-        if (!courier ) {
+        if (!courier) {
             return res.status(400).json({
                 success: false,
                 message: "Courier Not Selected"
             })
         }
-        
+
         /* =====================================================
            DELHIVERY COURIER
         ===================================================== */
@@ -84,69 +86,64 @@ exports.getCourierRecommendations = async (req, res) => {
 
     try {
 
-        console.log("📊 Getting courier recommendations");
+        console.log("🚚 Getting courier recommendations");
 
-        /*
-        Future me yaha real APIs call hongi
-        Abhi dummy example data use kar rahe hain
-        */
+        const { pickupPincode, deliveryPincode, weight } = req.body;
 
-        const couriers = [
+        let couriers = [];
 
-            {
+
+        /* ---------------- DELHIVERY RATE ---------------- */
+
+        try {
+
+            const delhiveryRate = await calculateDelhiveryRate(pickupPincode, deliveryPincode, weight);
+
+            couriers.push({
                 name: "Delhivery",
-                price: 42,
-                deliveryDays: 4
-            },
+                price: delhiveryRate.price,
+                deliveryDays: delhiveryRate.estimatedDays
+            });
 
-            {
+        } catch (err) {
+
+            console.log("❌ Delhivery rate error", err.message);
+
+        }
+
+
+        /* ---------------- EKART RATE ---------------- */
+
+        try {
+
+            const ekartRate = await getEkartRate(pickupPincode, deliveryPincode, weight);
+
+            couriers.push({
                 name: "Ekart",
-                price: 55,
-                deliveryDays: 2
-            }
+                price: ekartRate.price,
+                deliveryDays: ekartRate.estimatedDays
+            });
 
-        ];
+        } catch (err) {
 
-        /* =====================================================
-           CHEAPEST COURIER
-        ===================================================== */
+            console.log("❌ Ekart rate error", err.message);
 
-        const cheapest = couriers.reduce((prev, curr) =>
-            prev.price < curr.price ? prev : curr
-        );
+        }
 
-        /* =====================================================
-           FASTEST COURIER
-        ===================================================== */
 
-        const fastest = couriers.reduce((prev, curr) =>
-            prev.deliveryDays < curr.deliveryDays ? prev : curr
-        );
-
-        /* =====================================================
-           RESPONSE
-        ===================================================== */
+        /* ---------------- RESPONSE ---------------- */
 
         return res.json({
-
             success: true,
-
-            recommended: {
-                cheapest,
-                fastest
-            },
-
             couriers
-
         });
 
     } catch (error) {
 
-        console.log("❌ Recommendation Error:", error.message);
+        console.log("❌ Courier recommendation error", error);
 
         return res.status(500).json({
-            success: false,
-            message: "Failed to fetch courier recommendations"
+            success: false
         });
 
     }
@@ -170,8 +167,8 @@ exports.trackShipment = async (req, res) => {
         if (!shipment) {
 
             return res.status(404).json({
-                success:false,
-                message:"Shipment not found"
+                success: false,
+                message: "Shipment not found"
             });
 
         }
@@ -193,8 +190,8 @@ exports.trackShipment = async (req, res) => {
         }
 
         return res.status(400).json({
-            success:false,
-            message:"Unsupported courier"
+            success: false,
+            message: "Unsupported courier"
         });
 
     } catch (error) {
@@ -202,8 +199,8 @@ exports.trackShipment = async (req, res) => {
         console.log("TRACK ENGINE ERROR:", error.message);
 
         return res.status(500).json({
-            success:false,
-            message:"Tracking failed"
+            success: false,
+            message: "Tracking failed"
         });
 
     }
