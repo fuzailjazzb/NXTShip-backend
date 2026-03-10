@@ -125,7 +125,7 @@ exports.bookEkartShipment = async (req, res) => {
 
             quantity: 1,
 
-            weight: shipmentData.weight || 500,
+            weight: parseInt(shipmentData.weight) || 500,
             length: 10,
             height: 10,
             width: 10,
