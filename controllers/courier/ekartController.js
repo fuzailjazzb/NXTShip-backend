@@ -109,6 +109,7 @@ exports.bookEkartShipment = async (req, res) => {
 
             consignee_name: shipmentData.customerName,
             consignee_alternate_phone: shipmentData.phone,
+            consignee_gst_amount: 0,
 
             products_desc: shipmentData.product || "Parcel",
 
