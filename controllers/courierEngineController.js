@@ -1,7 +1,7 @@
 const { bookShipment: bookDelhiveryShipment } = require("./shipmentController");
 const { bookEkartShipment } = require("./courier/ekartController");
 const { getEkartRate } = require("./courier/ekartController");
-const { calculateDelhiveryRate } = require("./rateControllers");
+const { getDelhiveryRate } = require("./rateControllers");
 
 /* =====================================================
    COURIER ENGINE
@@ -91,7 +91,7 @@ exports.getCourierRecommendations = async (req, res) => {
 
         const { fromPincode, toPincode, weight, paymentType } = req.body;
 
-        console.log("fromPincode",fromPincode);
+        console.log("fromPincode", fromPincode);
         console.log("topincode", toPincode);
         console.log("weight", weight);
         console.log("payment type", paymentType);
@@ -103,13 +103,15 @@ exports.getCourierRecommendations = async (req, res) => {
 
         try {
 
-            const delhiveryRate = await calculateDelhiveryRate(fromPincode, toPincode, weight, paymentType);
+            const delhiveryRate = await getDelhiveryRate(fromPincode, toPincode, weight, paymentType);
 
-            couriers.push({
-                name: "Delhivery",
-                price: delhiveryRate.price,
-                deliveryDays: delhiveryRate.estimatedDays
-            });
+            if (delhiveryRate) {
+                couriers.push({
+                    name: "Delhivery",
+                    price: delhiveryRate.price,
+                    deliveryDays: delhiveryRate.estimatedDays
+                });
+            }
 
         } catch (err) {
 

@@ -102,4 +102,58 @@ const calculateDelhiveryRate = async (req, res) => {
     }
 };
 
-module.exports = { calculateDelhiveryRate };
+const getDelhiveryRate = async (fromPincode, toPincode, weight, paymentType) => {
+    try {
+
+        if (!fromPincode || !toPincode || !weight) {
+            throw new Error("Missing required fields for Delhivery rate");
+        }
+
+        // kg → grams
+        const chargeWeight = Math.ceil(Number(weight) * 1000);
+
+        console.log("📦 Delhivery Rate API Hit");
+        console.log("From:", fromPincode);
+        console.log("To:", toPincode);
+        console.log("Weight (grams):", chargeWeight);
+
+        const response = await axios.get(
+            "https://track.delhivery.com/api/kinko/v1/invoice/charges/.json",
+            {
+                params: {
+                    md: "E",
+                    ss: "Delivered",
+                    d_pin: toPincode,
+                    o_pin: fromPincode,
+                    cgm: chargeWeight,
+                    pt: paymentType || "Pre-paid"
+                },
+                headers: {
+                    Authorization: `Token ${process.env.DELHIVERY_TOKEN}`
+                }
+            }
+        );
+
+        console.log("📦 Delhivery API Response:", response.data);
+
+        const data = response.data?.[0];
+
+        if (!data) {
+            return null;
+        }
+
+        return {
+            price: data.total_amount || 0,
+            estimatedDays: data.estimated_days || 4
+        };
+
+    } catch (error) {
+
+        console.log("❌ Delhivery Rate Error:", error.message);
+
+        return null;
+
+    }
+}
+
+module.exports = { calculateDelhiveryRate, getDelhiveryRate };
