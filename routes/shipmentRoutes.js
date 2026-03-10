@@ -16,10 +16,10 @@ router.get("/all", authMiddleware, getAllShipments);
 router.post("/courier/rates", authMiddleware, courierEngineController.getCourierRecommendations)
 
 // Track Shipment Route
-router.get("/track/:waybill", authMiddleware, trackShipment);
+router.get("/track/:waybill", authMiddleware, courierEngineController.trackShipment);
 
 // Track Shipment AWB Route
-router.get("/delhivery/:waybill", authMiddleware, delhiveryTracking);
+router.get("/delhivery/:waybill", authMiddleware, courierEngineController.trackShipment);
 
 // track shipment route
 router.get("/track/:awb", authMiddleware, trackShipment);

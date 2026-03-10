@@ -4,8 +4,27 @@ const Customer = require("../../models/customer");
 const Commission = require("../../models/commission");
 
 /* =====================================================
+   GET EKART TOKEN
+===================================================== */
+
+const getEkartToken = async () => {
+
+    const response = await axios.post(
+        `${process.env.EKART_BASE_URL}/integrations/v2/auth/token/${process.env.EKART_CLIENT_ID}`,
+        {
+            username: process.env.EKART_USERNAME,
+            password: process.env.EKART_PASSWORD
+        }
+    );
+
+    return response.data.access_token;
+};
+
+
+/* =====================================================
    CREATE EKART SHIPMENT
 ===================================================== */
+
 exports.bookEkartShipment = async (req, res) => {
 
     try {
@@ -13,19 +32,7 @@ exports.bookEkartShipment = async (req, res) => {
         console.log("🚚 EKART BOOK SHIPMENT");
 
         const shipmentData = req.body;
-        if (!req.user || !req.user._id) {
-            console.log("req.user missing");
-            return res.status(401).json({
-                success: false,
-                message: "unauthorized user"
-            });
-        }
-
         const customerId = req.user._id;
-
-        /* ==============================
-           CUSTOMER FETCH
-        ============================== */
 
         const customer = await Customer.findById(customerId);
 
@@ -36,15 +43,7 @@ exports.bookEkartShipment = async (req, res) => {
             });
         }
 
-        /* ==============================
-           SHIPPING CHARGE
-        ============================== */
-
         const shippingCharge = shipmentData.shippingCharge || 50;
-
-        /* ==============================
-           COMMISSION
-        ============================== */
 
         let commission = await Commission.findOne();
 
@@ -61,10 +60,6 @@ exports.bookEkartShipment = async (req, res) => {
 
         const finalCharge = shippingCharge + adminCommission;
 
-        /* ==============================
-           WALLET CHECK
-        ============================== */
-
         if (customer.walletBalance < finalCharge) {
             return res.status(400).json({
                 success: false,
@@ -72,40 +67,122 @@ exports.bookEkartShipment = async (req, res) => {
             });
         }
 
-        /* ==============================
-           EKART TOKEN
-        ============================== */
-
-        const tokenResponse = await axios.post(
-            `${process.env.EKART_BASE_URL}/auth/token/${process.env.EKART_CLIENT_ID}`,
-            {
-                client_secret: process.env.EKART_CLIENT_SECRET
-            }
-        );
-
-        const token = tokenResponse?.data?.access_token;
-
-        if (!token) {
-            throw new Error("Ekart token not recieved");
-        }
-
-        /* ==============================
-           CREATE SHIPMENT PAYLOAD
-        ============================== */
+        const token = await getEkartToken();
 
         const payload = {
 
-            order_id: shipmentData.orderId,
-            customer_name: shipmentData.customerName,
-            phone: shipmentData.phone,
-            address: shipmentData.address,
-            pincode: shipmentData.pincode,
-            weight: shipmentData.weight || 0.5
+            seller_name: shipmentData.sellerName || "Default Seller",
+
+            seller_address: shipmentData.sellerAddress || "Warehouse Address",
+
+            seller_gst_tin: shipmentData.sellerGst || "GST123",
+
+            seller_gst_amount: 0,
+
+            consignee_gst_amount: 0,
+
+            integrated_gst_amount: 0,
+
+            order_number: shipmentData.orderId,
+
+            invoice_number: shipmentData.invoiceNumber || shipmentData.orderId,
+
+            invoice_date: new Date().toISOString().split("T")[0],
+
+            consignee_name: shipmentData.customerName,
+
+            consignee_alternate_phone: shipmentData.phone,
+
+            products_desc: shipmentData.product || "Product",
+
+            payment_mode: shipmentData.paymentMode || "Prepaid",
+
+            category_of_goods: shipmentData.category || "General",
+
+            total_amount: shipmentData.amount || 1,
+
+            tax_value: shipmentData.tax || 0,
+
+            taxable_amount: shipmentData.amount || 1,
+
+            commodity_value: String(shipmentData.amount || 1),
+
+            cod_amount: shipmentData.codAmount || 0,
+
+            quantity: shipmentData.quantity || 1,
+
+            weight: shipmentData.weight || 500,
+
+            length: shipmentData.length || 10,
+
+            height: shipmentData.height || 10,
+
+            width: shipmentData.width || 10,
+
+            drop_location: {
+
+                location_type: "Home",
+
+                address: shipmentData.address,
+
+                city: shipmentData.city,
+
+                state: shipmentData.state,
+
+                country: "India",
+
+                name: shipmentData.customerName,
+
+                phone: shipmentData.phone,
+
+                pin: shipmentData.pincode
+
+            },
+
+            pickup_location: {
+
+                location_type: "Office",
+
+                address: shipmentData.pickupAddress || "Warehouse",
+
+                city: shipmentData.pickupCity || "Patna",
+
+                state: shipmentData.pickupState || "Bihar",
+
+                country: "India",
+
+                name: shipmentData.pickupName || "Warehouse",
+
+                phone: shipmentData.pickupPhone || "9999999999",
+
+                pin: shipmentData.pickupPincode || 800001
+
+            },
+
+            return_location: {
+
+                location_type: "Office",
+
+                address: shipmentData.pickupAddress || "Warehouse",
+
+                city: shipmentData.pickupCity || "Patna",
+
+                state: shipmentData.pickupState || "Bihar",
+
+                country: "India",
+
+                name: shipmentData.pickupName || "Warehouse",
+
+                phone: shipmentData.pickupPhone || "9999999999",
+
+                pin: shipmentData.pickupPincode || 800001
+
+            }
 
         };
 
-        const shipmentResponse = await axios.post(
-            `${process.env.EKART_BASE_URL}/shipments`,
+        const shipmentResponse = await axios.put(
+            `${process.env.EKART_BASE_URL}/api/v1/package/create`,
             payload,
             {
                 headers: {
@@ -114,22 +191,10 @@ exports.bookEkartShipment = async (req, res) => {
             }
         );
 
-        const waybill = shipmentResponse?.data?.tracking_id;
-
-        if (!waybill) {
-            throw new Error("Waybill not recieved from Ekart");
-        }
-
-        /* ==============================
-           WALLET DEDUCT
-        ============================== */
+        const waybill = shipmentResponse.data.tracking_id;
 
         customer.walletBalance -= finalCharge;
         await customer.save();
-
-        /* ==============================
-           SAVE SHIPMENT
-        ============================== */
 
         const newShipment = await Shipment.create({
 
@@ -140,10 +205,6 @@ exports.bookEkartShipment = async (req, res) => {
             status: "Booked"
 
         });
-
-        /* ==============================
-           RESPONSE
-        ============================== */
 
         return res.status(201).json({
 
@@ -171,58 +232,19 @@ exports.bookEkartShipment = async (req, res) => {
 
 
 /* =====================================================
-   GET ALL SHIPMENTS
-===================================================== */
-exports.getAllEkartShipments = async (req, res) => {
-
-    try {
-
-        const shipments = await Shipment.find({
-            courier: "Ekart",
-            customerId: req.user._id
-        }).sort({ createdAt: -1 });
-
-        return res.json({
-            success: true,
-            count: shipments.length,
-            shipments
-        });
-
-    } catch (err) {
-
-        console.log("EKART ALL ERROR:", err.message);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch Ekart shipments"
-        });
-
-    }
-
-};
-
-
-
-/* =====================================================
    TRACK EKART SHIPMENT
 ===================================================== */
+
 exports.trackEkartShipment = async (req, res) => {
 
     try {
 
+        const token = await getEkartToken();
+
         const waybill = req.params.waybill;
 
-        const tokenResponse = await axios.post(
-            `${process.env.EKART_BASE_URL}/auth/token/${process.env.EKART_CLIENT_ID}`,
-            {
-                client_secret: process.env.EKART_CLIENT_SECRET
-            }
-        );
-
-        const token = tokenResponse.data.access_token;
-
-        const trackingResponse = await axios.get(
-            `${process.env.EKART_BASE_URL}/track/${waybill}`,
+        const response = await axios.get(
+            `${process.env.EKART_BASE_URL}/api/v1/track/${waybill}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -232,12 +254,12 @@ exports.trackEkartShipment = async (req, res) => {
 
         return res.json({
             success: true,
-            tracking: trackingResponse.data
+            tracking: response.data
         });
 
-    } catch (err) {
+    } catch (error) {
 
-        console.log("EKART TRACK ERROR:", err.message);
+        console.log("EKART TRACK ERROR:", error.message);
 
         return res.status(500).json({
             success: false,
@@ -251,25 +273,19 @@ exports.trackEkartShipment = async (req, res) => {
 
 
 /* =====================================================
-   PIN SERVICEABILITY
+   CANCEL EKART SHIPMENT
 ===================================================== */
-exports.checkEkartPinService = async (req, res) => {
+
+exports.cancelEkartShipment = async (req, res) => {
 
     try {
 
-        const pincode = req.params.pincode;
+        const token = await getEkartToken();
 
-        const tokenResponse = await axios.post(
-            `${process.env.EKART_BASE_URL}/auth/token/${process.env.EKART_CLIENT_ID}`,
-            {
-                client_secret: process.env.EKART_CLIENT_SECRET
-            }
-        );
+        const trackingId = req.params.waybill;
 
-        const token = tokenResponse.data.access_token;
-
-        const serviceResponse = await axios.get(
-            `${process.env.EKART_BASE_URL}/serviceability/${pincode}`,
+        const response = await axios.delete(
+            `${process.env.EKART_BASE_URL}/api/v1/package/cancel?tracking_id=${trackingId}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -279,12 +295,60 @@ exports.checkEkartPinService = async (req, res) => {
 
         return res.json({
             success: true,
-            service: serviceResponse.data
+            cancel: response.data
         });
 
-    } catch (err) {
+    } catch (error) {
 
-        console.log("EKART PIN ERROR:", err.message);
+        console.log("EKART CANCEL ERROR:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Cancel failed"
+        });
+
+    }
+
+};
+
+
+
+/* =====================================================
+   PIN SERVICEABILITY
+===================================================== */
+
+exports.checkEkartPinService = async (req, res) => {
+
+    try {
+
+        const token = await getEkartToken();
+
+        const response = await axios.post(
+            `${process.env.EKART_BASE_URL}/data/pricing/estimate`,
+            {
+                pickupPincode: req.query.pickup,
+                dropPincode: req.query.drop,
+                weight: 500,
+                length: 10,
+                height: 10,
+                width: 10,
+                serviceType: "SURFACE"
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        return res.json({
+            success: true,
+            data: response.data
+        });
+
+    } catch (error) {
+
+        console.log("EKART PIN ERROR:", error.message);
 
         return res.status(500).json({
             success: false,
@@ -298,38 +362,39 @@ exports.checkEkartPinService = async (req, res) => {
 
 
 /* =====================================================
-   CANCEL EKART SHIPMENT
+   DOWNLOAD LABEL
 ===================================================== */
-exports.cancelEkartShipment = async (req, res) => {
+
+exports.downloadEkartLabel = async (req, res) => {
 
     try {
 
-        const shipmentId = req.params.id;
+        const token = await getEkartToken();
 
-        const shipment = await Shipment.findById(shipmentId);
-
-        if (!shipment) {
-            return res.status(404).json({
-                success: false,
-                message: "Shipment not found"
-            });
-        }
-
-        shipment.status = "Cancelled";
-        await shipment.save();
+        const response = await axios.post(
+            `${process.env.EKART_BASE_URL}/api/v1/package/label`,
+            {
+                ids: [req.params.waybill]
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
 
         return res.json({
             success: true,
-            message: "Shipment cancelled"
+            label: response.data
         });
 
-    } catch (err) {
+    } catch (error) {
 
-        console.log("EKART CANCEL ERROR:", err.message);
+        console.log("EKART LABEL ERROR:", error.message);
 
         return res.status(500).json({
             success: false,
-            message: "Cancel failed"
+            message: "Label download failed"
         });
 
     }
