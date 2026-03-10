@@ -7,8 +7,6 @@ const Commission = require("../../models/commission");
    GET EKART TOKEN
 ===================================================== */
 
-console.log("req user", req.user);
-
 const getEkartToken = async () => {
 
     const response = await axios.post(
@@ -32,6 +30,14 @@ exports.bookEkartShipment = async (req, res) => {
     try {
 
         console.log("🚚 EKART BOOK SHIPMENT");
+        console.log("req user", req.user);
+
+        if (!req.user || req.user._id) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized usersa"
+            })
+        }
 
         const shipmentData = req.body;
         const customerId = req.user._id;
