@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const warehouseSchema = new mongoose.Schema({
     userId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"User",
+        ref:"Customer",
         required:true
     },
 
@@ -18,6 +18,11 @@ const warehouseSchema = new mongoose.Schema({
     pincode:String,
 
     phone:String,
+
+    isDefault:{
+        type:Boolean,
+        default:false
+    },
 
     createdAt:{
         type:Date,
