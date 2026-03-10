@@ -12,6 +12,7 @@ exports.bookShipment = async (req, res) => {
     try {
 
         console.log("🚚 COURIER ENGINE STARTED");
+        console.log("USER DATA", req.user);
 
         const courier = req.body.courier;
 
