@@ -3,6 +3,10 @@ const { bookEkartShipment } = require("./courier/ekartController");
 const { getEkartRate } = require("./courier/ekartController");
 const { getDelhiveryRate } = require("./rateControllers");
 
+const delhiveryLabel = require("../controllers/labels/delhiveryLabel");
+const ekartLabel = require("../controllers/labels/ekart/Label");
+const shipfastLabel = require("../controllers/labels/shipfastLabel");
+
 /* =====================================================
    COURIER ENGINE
    - User chooses courier
@@ -159,7 +163,7 @@ exports.getCourierRecommendations = async (req, res) => {
 };
 
 /*=====================================================
-   TRACK SHIPMENT
+   TRACK SHIPMENT !!!
 ===================================================== */
 
 exports.trackShipment = async (req, res) => {
@@ -212,5 +216,35 @@ exports.trackShipment = async (req, res) => {
         });
 
     }
+
+}
+
+/*=====================================================
+   LABEL & INVOICE DOWNLOAD !!!
+===================================================== */
+
+exports.getCourierLabel = async (courier, shipment) => {
+
+    console.log("Generating label for:", courier);
+
+    if (courier === "Delhivery") {
+
+        return await delhiveryLabel(shipment);
+
+    }
+
+    if (courier === "Ekart") {
+
+        return await ekartLabel(shipment);
+
+    }
+
+    if (courier === "Shipfast") {
+
+        return await shipfastLabel(shipment);
+
+    }
+
+    return null;
 
 }
