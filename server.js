@@ -11,6 +11,7 @@ const customerBookingRoutes = require("./routes/customerBookingRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const warehouseRoutes = require("./routes/warehouseRoutes");
+const labelRoutes = require("./routes/labelRoutes");
 
 const app = express();
 app.use(express.json());
@@ -57,6 +58,9 @@ app.use("/api/dashboard", dashboardRoutes);
 
 // warehouse
 app.use("/api", warehouseRoutes);
+
+// label & invoive
+app.use("/api", labelRoutes);
 
 
 

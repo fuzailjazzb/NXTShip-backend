@@ -1,17 +1,33 @@
-module.exports = async function ekartLabel(shipment){
+const axios = require("axios");
 
-const awb = shipment.waybill;
+module.exports = async function ekartLabel(shipment) {
 
-const labelUrl = `https://ekart-api.com/label/${awb}`;
+    try {
 
-return {
+        console.log("=======================================");
+        console.log("📦 EKART LABEL GENERATOR");
+        console.log("AWB:", shipment.waybill);
+        console.log("=======================================");
 
-courier:"Ekart",
+        const awb = shipment.waybill;
 
-awb,
+        const labelUrl = `https://ekartlogistics.com/label/${awb}`;
 
-labelUrl
+        console.log("Calling Delhivery API:", labelUrl);
+        
+        return {
+            labelUrl: labelUrl,
+            awb: awb
+        };
+
+    }
+
+    catch (error) {
+
+        console.log("❌ Ekart Label Error");
+
+        throw new Error("Ekart label failed");
+
+    }
 
 };
-
-}

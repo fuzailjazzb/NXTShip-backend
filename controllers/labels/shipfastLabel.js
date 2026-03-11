@@ -1,15 +1,33 @@
-module.exports = async function shipfastLabel(shipment){
+const axios = require("axios");
 
-const awb = shipment.waybill;
+module.exports = async function shipfastLabel(shipment) {
 
-return {
+    try {
 
-courier:"Shipfast",
+        console.log("=======================================");
+        console.log("📦 SHIPFAST LABEL GENERATOR");
+        console.log("AWB:", shipment.waybill);
+        console.log("=======================================");
 
-awb,
+        const awb = shipment.waybill;
 
-labelUrl:null
+        const labelUrl = `https://shipfast.com/api/label/${awb}`;
+
+        console.log("Calling Delhivery API:", labelUrl);
+
+        return {
+            labelUrl: labelUrl,
+            awb: awb
+        };
+
+    }
+
+    catch (error) {
+
+        console.log("❌ Shipfast Label Error");
+
+        throw new Error("Shipfast label failed");
+
+    }
 
 };
-
-}

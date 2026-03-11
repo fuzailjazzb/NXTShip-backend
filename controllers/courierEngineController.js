@@ -3,9 +3,11 @@ const { bookEkartShipment } = require("./courier/ekartController");
 const { getEkartRate } = require("./courier/ekartController");
 const { getDelhiveryRate } = require("./rateControllers");
 
-const delhiveryLabel = require("../controllers/labels/delhiveryLabel");
-const ekartLabel = require("../controllers/labels/ekart/Label");
-const shipfastLabel = require("../controllers/labels/shipfastLabel");
+const Shipment = require("../models/shipment");
+
+const delhiveryLabel = require("./labels/delhiveryLabel");
+const ekartLabel = require("./labels/ekartLabel");
+const shipfastLabel = require("./labels/shipfastLabel");
 
 /* =====================================================
    COURIER ENGINE
@@ -219,32 +221,110 @@ exports.trackShipment = async (req, res) => {
 
 }
 
-/*=====================================================
-   LABEL & INVOICE DOWNLOAD !!!
-===================================================== */
+// ===============================
+// GENERATE LABEL !!!
+// ===============================
 
-exports.getCourierLabel = async (courier, shipment) => {
+exports.generateLabel = async (req, res) => {
 
-    console.log("Generating label for:", courier);
+    try {
 
-    if (courier === "Delhivery") {
+        console.log("=======================================");
+        console.log("🚀 LABEL GENERATION API HIT");
+        console.log("Time:", new Date());
+        console.log("Params:", req.params);
+        console.log("=======================================");
 
-        return await delhiveryLabel(shipment);
+        const { awb } = req.params;
+
+        if (!awb) {
+            return res.status(400).json({
+                success: false,
+                message: "AWB required"
+            });
+        }
+
+        console.log("🔍 Searching shipment for AWB:", awb);
+
+        const shipment = await Shipment.findOne({ waybill: awb });
+
+        if (!shipment) {
+
+            console.log("❌ Shipment not found");
+
+            return res.status(404).json({
+                success: false,
+                message: "Shipment not found"
+            });
+        }
+
+        console.log("✅ Shipment Found");
+        console.log("Courier:", shipment.courier);
+        console.log("OrderId:", shipment.orderId);
+
+        const courier = shipment.courier;
+
+        let labelResponse;
+
+        // ===============================
+        // COURIER ENGINE SWITCH
+        // ===============================
+
+        if (courier === "Delhivery") {
+
+            console.log("📦 Routing to DELHIVERY LABEL");
+
+            labelResponse = await delhiveryLabel(shipment);
+
+        }
+
+        else if (courier === "Ekart") {
+
+            console.log("📦 Routing to EKART LABEL");
+
+            labelResponse = await ekartLabel(shipment);
+
+        }
+
+        else if (courier === "Shipfast") {
+
+            console.log("📦 Routing to SHIPFAST LABEL");
+
+            labelResponse = await shipfastLabel(shipment);
+
+        }
+
+        else {
+
+            console.log("❌ Unsupported courier:", courier);
+
+            return res.status(400).json({
+                success: false,
+                message: "Unsupported Courier"
+            });
+        }
+
+        console.log("✅ Label generated successfully");
+
+        return res.json({
+            success: true,
+            courier,
+            label: labelResponse
+        });
 
     }
 
-    if (courier === "Ekart") {
+    catch (error) {
 
-        return await ekartLabel(shipment);
+        console.log("❌ LABEL ENGINE ERROR");
+        console.log(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Label generation failed",
+            error: error.message
+        });
 
     }
 
-    if (courier === "Shipfast") {
-
-        return await shipfastLabel(shipment);
-
-    }
-
-    return null;
-
-}
+};
