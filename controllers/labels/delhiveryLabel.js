@@ -2,34 +2,39 @@ const axios = require("axios");
 
 module.exports = async function delhiveryLabel(shipment) {
 
-    try {
+  try {
 
-        console.log("=======================================");
-        console.log("📦 DELHIVERY LABEL GENERATOR");
-        console.log("AWB:", shipment.waybill);
-        console.log("=======================================");
+    console.log("DELHIVERY LABEL GENERATOR");
 
-        const awb = shipment.waybill;
+    const awb = shipment.waybill;
 
-        const labelUrl = `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}`;
+    const url =
+      `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}&pdf=true`;
 
-        console.log("Calling Delhivery API:", labelUrl);
+    console.log("Calling Delhivery API:", url);
 
-        return res.json({
-            success: true,
-            shipment: shipment,
-            label: labelResponse
-        });
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    });
 
-    }
+    console.log("Delhivery Response:", res.data);
 
-    catch (error) {
+    return {
+      awb: awb,
+      labelUrl: url,
+      data: res.data
+    };
 
-        console.log("❌ Delhivery Label Error");
-        console.log(error);
+  } catch (error) {
 
-        throw new Error("Delhivery label failed");
+    console.log("Delhivery Label Error");
+    console.log(error.response?.data || error.message);
 
-    }
+    throw new Error("Delhivery label failed");
+
+  }
 
 };
