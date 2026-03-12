@@ -17,8 +17,8 @@ module.exports = async function delhiveryLabel(shipment) {
 
         return res.json({
             success: true,
-            labelUrl: labelUrl,
-            awb: labelResponse.awb
+            shipment: shipment,
+            label: labelResponse
         });
 
     }
