@@ -60,7 +60,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", warehouseRoutes);
 
 // label & invoive
-app.use("/api", labelRoutes);
+app.use("/label-api", labelRoutes);
 
 
 
