@@ -195,6 +195,7 @@ exports.trackShipment = async (req, res) => {
 
     return res.json({
       success: true,
+      shipment,
       status: shipment.status || "Booked",
       log: shipment.city || "N/A",
     });
