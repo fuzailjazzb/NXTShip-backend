@@ -135,9 +135,13 @@ exports.bookShipment = async (req, res) => {
       status: "Booked"
     });
 
+    
+
     await shipment.save();
 
     console.log("📦 Shipment Saved:", shipment._id);
+    console.log("📦 customer:", shipment.customerId);
+    console.log("📦 Shipment:", shipment);
 
 
     return res.json({
@@ -147,6 +151,7 @@ exports.bookShipment = async (req, res) => {
     });
   } catch (error) {
     console.log("Booking Error:", error.response?.data || error.message);
+    console.error("error :", error);
 
     return res.status(500).json({
       success: false,
