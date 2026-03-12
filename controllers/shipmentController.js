@@ -1,6 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
-const{ createCustomerFromShipment } = require("./customerController");
+const { createCustomerFromShipment } = require("./customerController");
 const { fetchWaybill } = require("../services/delhiveryService");
 
 /**
@@ -111,6 +111,33 @@ exports.bookShipment = async (req, res) => {
       });
     }
 
+    // ✅ SAVE SHIPMENT IN DATABASE
+    const shipment = new Shipment({
+      customerId: req.customer._id, // important
+
+      customerName: shipmentData.customerName,
+      phone: shipmentData.phone,
+      address: shipmentData.address,
+      city: shipmentData.city,
+      state: shipmentData.state,
+      pincode: shipmentData.pincode,
+
+      orderId: shipmentData.orderId,
+      paymentMode: shipmentData.paymentMode,
+      orderValue: shipmentData.orderValue,
+
+      weight: shipmentData.weight || "0.5",
+
+      waybill: waybill,
+
+      courier: "Delhivery",
+      timestamps: true,
+      status: "Booked"
+    });
+
+    await shipment.save();
+
+    console.log("📦 Shipment Saved:", shipment._id);
 
 
     return res.json({
