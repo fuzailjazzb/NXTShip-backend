@@ -15,10 +15,11 @@ module.exports = async function delhiveryLabel(shipment) {
 
         console.log("Calling Delhivery API:", labelUrl);
 
-        return {
+        return res.json({
+            success: true,
             labelUrl: labelUrl,
-            awb: awb
-        };
+            awb: labelResponse.awb
+        });
 
     }
 
