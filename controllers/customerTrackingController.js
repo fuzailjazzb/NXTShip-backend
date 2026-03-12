@@ -50,7 +50,7 @@ exports.trackShipment = async (req, res) => {
 
     const shipment = await Shipment.findOne({
       $or: [{ orderId: id }, { waybill: id }],
-      customerId: req.customer._id,
+      
     });
 
     if (!shipment) {

@@ -463,3 +463,4 @@ exports.getEkartRate = async (pickupPincode, deliveryPincode, weight) => {
     }
 
 };
+
