@@ -14,13 +14,15 @@ const warehouseRoutes = require("./routes/warehouseRoutes");
 const labelRoutes = require("./routes/labelRoutes");
 
 const app = express();
-app.use(express.json());
+
 
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
+app.use(express.json());
 
 // Routes
 
