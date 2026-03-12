@@ -308,7 +308,8 @@ exports.generateLabel = async (req, res) => {
 
         return res.json({
             success: true,
-            courier,
+            shipment: shipment,
+            courier: courier,
             label: labelResponse
         });
 
