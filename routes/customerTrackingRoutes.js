@@ -5,9 +5,11 @@ const router = express.Router();
 const { customerAuth } = require("../middleware/customerAuth");
 
 const {
-  getCustomerShipments,
-  trackShipment,
+  getCustomerShipments
+
 } = require("../controllers/customerTrackingController");
+
+const { trackShipment } = require("../controllers/shipmentController");
 
 // Last Orders
 router.get("/shipments", customerAuth, getCustomerShipments);
