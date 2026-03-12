@@ -113,7 +113,7 @@ exports.bookShipment = async (req, res) => {
 
     // ✅ SAVE SHIPMENT IN DATABASE
     const shipment = new Shipment({
-      customerId: req.customer._id, // important
+      customerId: req.user._id, // important
 
       customerName: shipmentData.customerName,
       phone: shipmentData.phone,
@@ -152,6 +152,7 @@ exports.bookShipment = async (req, res) => {
   } catch (error) {
     console.log("Booking Error:", error.response?.data || error.message);
     console.error("error :", error);
+    alert("Error : ", error);
 
     return res.status(500).json({
       success: false,
