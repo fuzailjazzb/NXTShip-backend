@@ -1,127 +1,152 @@
 const axios = require("axios");
-const Shipment = require("../../models/shipment");
-const Warehouse = require("../../models/warehouse");
 
-module.exports = async function delhiveryLabel(req, res) {
+module.exports = async function delhiveryLabel(shipment) {
 
   try {
 
     console.log("========== DELHIVERY LABEL GENERATOR ==========");
 
-    const shipmentId = req.params.id;
-
-    console.log("Fetching Shipment:", shipmentId);
-
-    const shipment = await Shipment.findById(shipmentId)
-      .populate("customerId");
-
     if (!shipment) {
-      return res.status(404).json({
-        success: false,
-        message: "Shipment not found"
-      });
+      throw new Error("Shipment object missing");
     }
 
-    const awb = shipment.waybill || shipment.awb;
+    console.log("Shipment ID:", shipment._id);
+    console.log("Courier:", shipment.courier);
+    console.log("Order ID:", shipment.orderId);
 
-    if (!awb) {
-      return res.status(400).json({
-        success: false,
-        message: "AWB missing in shipment"
-      });
-    }
 
-    console.log("AWB Found:", awb);
-
+    // SAFE FIELD EXTRACTION
     const delivery = shipment.delivery || {};
     const pickup = shipment.pickup || {};
     const product = shipment.product || {};
     const seller = shipment.seller || {};
 
-    console.log("Receiver:", delivery.customerName);
-    console.log("Receiver Address:", delivery.address);
 
-    const url = `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}&pdf=true`;
+    // SAFE AWB DETECTION
+    const awb = shipment.waybill || shipment.awb;
+
+    if (!awb) {
+      throw new Error("AWB missing in shipment");
+    }
+
+    console.log("AWB:", awb);
+
+
+    // DELHIVERY LABEL API
+    const url =
+      `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}&pdf=true`;
 
     console.log("Calling Delhivery API:", url);
 
+
+    // CALL DELHIVERY
     const response = await axios.get(url, {
+
       headers: {
         Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
         "Content-Type": "application/json"
       },
+
       responseType: "arraybuffer"
+
     });
 
-    console.log("Delhivery API Success");
+    console.log("Delhivery label generated successfully");
 
-    return res.json({
-      success: true,
-      shipment: {
-        id: shipment._id,
-        orderId: shipment.orderId,
-        productName: shipment.productName,
-        paymentMode: shipment.paymentMode,
-        status: shipment.status,
-        courier: shipment.courier,
-        waybill: shipment.waybill,
+
+    // RETURN SAFE STRUCTURE
+    return {
+
+      awb: awb,
+
+      labelUrl: url,
+
+      labelData: response.data,
+
+      shipmentData: {
+
+        orderId: shipment.orderId || null,
+
+        paymentMode: shipment.paymentMode || null,
+
+        status: shipment.status || null,
+
+        courier: shipment.courier || null,
+
 
         delivery: {
-          name: delivery.customerName,
-          phone: delivery.phone,
-          address: delivery.address,
-          city: delivery.city,
-          state: delivery.state,
-          pincode: delivery.pincode
+
+          name: delivery.customerName || null,
+
+          phone: delivery.phone || null,
+
+          address: delivery.address || null,
+
+          city: delivery.city || null,
+
+          state: delivery.state || null,
+
+          pincode: delivery.pincode || null
+
         },
 
         pickup: {
-          name: pickup.name,
-          phone: pickup.phone,
-          address: pickup.address,
-          city: pickup.city,
-          state: pickup.state,
-          pincode: pickup.pincode
+
+          name: pickup.name || null,
+
+          phone: pickup.phone || null,
+
+          address: pickup.address || null,
+
+          city: pickup.city || null,
+
+          state: pickup.state || null,
+
+          pincode: pickup.pincode || null
+
         },
 
         product: {
-          name: product.productName,
-          quantity: product.quantity,
-          weight: product.weight,
-          orderValue: product.orderValue
+
+          name: product.productName || null,
+
+          quantity: product.quantity || null,
+
+          weight: product.weight || null,
+
+          orderValue: product.orderValue || null
+
         },
 
         seller: {
-          name: seller.sellerName,
-          gst: seller.gst
+
+          name: seller.sellerName || null,
+
+          gst: seller.gst || null
+
         }
 
-      },
-
-      label: {
-        awb: awb,
-        labelUrl: url,
-        labelData: response.data
       }
 
-    });
+    };
 
   }
 
   catch (error) {
 
-    console.log("===== DELHIVERY LABEL ERROR =====");
+    console.log("====== DELHIVERY LABEL ERROR ======");
 
     if (error.response) {
-      console.log(error.response.data);
+
+      console.log("Delhivery API Error:", error.response.data);
+
     } else {
-      console.log(error.message);
+
+      console.log("Internal Error:", error.message);
+
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Delhivery label generation failed"
-    });
+    throw new Error("Delhivery label failed");
 
   }
 

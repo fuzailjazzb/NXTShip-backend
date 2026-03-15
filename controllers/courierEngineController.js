@@ -249,7 +249,14 @@ exports.generateLabel = async (req, res) => {
 
         console.log("🔍 Searching shipment for AWB:", awb);
 
-        const shipment = await Shipment.findOne({ waybill: awb });
+        const shipment = await Shipment.findOne({
+            $or: [
+                { waybill: awb },
+                { awb: awb}
+            ] 
+        });
+
+        console.log("Shipment DB Result:", shipment);
 
         if (!shipment) {
 
