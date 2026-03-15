@@ -9,6 +9,9 @@ const delhiveryLabel = require("./labels/delhiveryLabel");
 const ekartLabel = require("./labels/ekartLabel");
 const shipfastLabel = require("./labels/shipfastLabel");
 
+
+const { trackShipment } = require("./shipmentController")
+
 /* =====================================================
    COURIER ENGINE
    - User chooses courier
@@ -191,13 +194,13 @@ exports.trackShipment = async (req, res) => {
 
         console.log("Courier:", courier);
 
-        if (courier === "Delhivery") {
+        if (courier === "delhivery") {
 
-            return await trackCustomerShipment(req, res);
+            return await trackShipment(req, res);
 
         }
 
-        if (courier === "Ekart") {
+        if (courier === "ekart") {
 
             return await trackEkartShipment(req, res);
 
@@ -270,7 +273,7 @@ exports.generateLabel = async (req, res) => {
         // COURIER ENGINE SWITCH
         // ===============================
 
-        if (courier === "Delhivery") {
+        if (courier === "delhivery") {
 
             console.log("📦 Routing to DELHIVERY LABEL");
 
@@ -278,7 +281,7 @@ exports.generateLabel = async (req, res) => {
 
         }
 
-        else if (courier === "Ekart") {
+        else if (courier === "ekart") {
 
             console.log("📦 Routing to EKART LABEL");
 
