@@ -9,7 +9,7 @@ const {
 
 } = require("../controllers/customerTrackingController");
 
-const { trackShipment } = require("../controllers/shipmentController");
+const { trackShipment } = require("../controllers/customerTrackingController");
 
 // Last Orders
 router.get("/shipments", customerAuth, getCustomerShipments);
