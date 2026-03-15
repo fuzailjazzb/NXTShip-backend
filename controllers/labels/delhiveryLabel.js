@@ -6,7 +6,11 @@ module.exports = async function delhiveryLabel(shipment) {
 
     console.log("DELHIVERY LABEL GENERATOR");
 
-    const awb = shipment.waybill;
+    const awb = shipment.waybill || shipment.awb;
+
+    if (!awb) {
+      throw new Error("AWB Missing in Shipment");
+    }
 
     const url =
       `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}&pdf=true`;
@@ -17,7 +21,8 @@ module.exports = async function delhiveryLabel(shipment) {
       headers: {
         Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
         "Content-Type": "application/json"
-      }
+      },
+      responseType:"arraybuffer"
     });
 
     console.log("Delhivery Response:", res.data);
@@ -25,7 +30,7 @@ module.exports = async function delhiveryLabel(shipment) {
     return {
       awb: awb,
       labelUrl: url,
-      data: res.data
+      labelData: res.data
     };
 
   } catch (error) {

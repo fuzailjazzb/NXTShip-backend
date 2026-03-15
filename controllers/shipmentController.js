@@ -257,7 +257,7 @@ exports.bookShipment = async (req, res) => {
               customerId: shipmentData.customerId,
           });
   
-          console.log("✅ Shipment Saved:", newShipment._id);
+          console.log("✅ Shipment Saved:", newShipment.id);
   
           /* =====================================================
              SUCCESS

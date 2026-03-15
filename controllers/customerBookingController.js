@@ -289,3 +289,159 @@ exports.bookCustomerShipment = async (req, res) => {
         });
     }
 };
+
+
+
+
+exports.bookShipment = async (req, res) => {
+  try {
+    const shipmentData = req.body;
+
+    // ✅ Delhivery Payload (documentation exact)
+    const payload = {
+      shipments: [
+        {
+          name: shipmentData.customerName,
+          add: shipmentData.address,
+          pin: shipmentData.pincode,
+          city: shipmentData.city,
+          state: shipmentData.state,
+          country: "India",
+          phone: shipmentData.phone,
+
+          order: shipmentData.orderId,
+          payment_mode: shipmentData.paymentMode,
+
+          products_desc: "Clothes",
+          hsn_code: "6109",
+
+          cod_amount:
+            shipmentData.paymentMode === "COD"
+              ? shipmentData.orderValue
+              : 0,
+
+          total_amount: shipmentData.orderValue,
+          quantity: "1",
+
+          shipment_length: "10",
+          shipment_width: "10",
+          shipment_height: "10",
+
+          weight: shipmentData.weight || "0.5",
+
+          return_add: shipmentData.address,
+          return_pin: shipmentData.pincode,
+          return_city: shipmentData.city,
+          return_state: shipmentData.state,
+          return_country: "India",
+          return_phone: shipmentData.phone,
+
+          seller_name: "KING NXT",
+          seller_add: "Hyderabad Warehouse",
+          seller_inv: shipmentData.orderId,
+
+          shipping_mode: "Surface",
+          address_type: "home",
+        },
+      ],
+
+      pickup_location: {
+        name: "KING NXT",
+      },
+    };
+
+
+
+    // ✅ सबसे जरूरी चीज
+    const formData =
+      "format=json&data=" + encodeURIComponent(JSON.stringify(payload));
+
+    // ✅ Delhivery API Call
+    const response = await axios.post(
+      "https://track.delhivery.com/api/cmu/create.json",
+      formData,
+      {
+        method:"POST",
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    console.log(JSON.stringify(response.data, null, 2));
+
+    const pkg = response.data.packages?.[0];
+
+    console.log("status:", pkg.status);
+    console.log("waybill:", pkg.waybill);
+    console.log("REMARKS FULL:", pkg.remarks);
+
+    console.log("DELHIVERY RESPONSE:", response.data);
+
+    // await createCustomerFromShipment(shipmentData);
+
+    // ✅ Waybill निकालो
+    const waybill =
+      response.data?.packages?.[0]?.waybill ||
+      response.data?.packages?.[0]?.waybill_number;
+
+    if (!waybill) {
+      return res.status(400).json({
+        success: false,
+        message: "No waybill received from Delhivery",
+        delhiveryResponse: response.data,
+      });
+    }
+
+    // ✅ SAVE SHIPMENT IN DATABASE
+    const shipment = new Shipment({
+      customerId: req.user._id, // important
+
+      customerName: shipmentData.customerName,
+      phone: shipmentData.phone,
+      address: shipmentData.address,
+      city: shipmentData.city,
+      state: shipmentData.state,
+      pincode: shipmentData.pincode,
+
+      orderId: shipmentData.orderId,
+      paymentMode: shipmentData.paymentMode,
+      orderValue: shipmentData.orderValue,
+
+      weight: shipmentData.weight || "0.5",
+
+      waybill: waybill,
+
+      courier: "Delhivery",
+      timestamps: true,
+      status: "Booked"
+    });
+
+    
+
+    await shipment.save();
+
+    console.log("📦 Shipment Saved:", shipment._id);
+    console.log("📦 customer:", shipment.customerId);
+    console.log("📦 Shipment:", shipment);
+
+
+    return res.json({
+      success: true,
+      waybill,
+      orderId: shipmentData.orderId,
+    });
+  } catch (error) {
+    console.log("Booking Error:", error.response?.data || error.message);
+    console.error("error :", error);
+    alert("Error : ", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Shipment Booking Failed",
+      error: error.response?.data || error.message,
+    });
+  }
+};
