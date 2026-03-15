@@ -33,7 +33,7 @@ exports.bookShipment = async (req, res) => {
   
           console.log("👤 req.user assigned:", req.user);
   
-          if (!user || !user._id) {
+          if (!user || !user.id) {
               console.log("❌ USER INVALID OR MISSING");
               return res.status(401).json({
                   success: false,
@@ -41,7 +41,7 @@ exports.bookShipment = async (req, res) => {
               });
           }
   
-          shipmentData.customerId = user._id;
+          shipmentData.customerId = user.id;
   
           console.log("✅ CustomerId attached:", shipmentData.customerId);
   
