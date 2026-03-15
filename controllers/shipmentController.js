@@ -1,5 +1,10 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const Customer = require("../models/customer");
+const Commission = require("../models/commission");
+const AdminEarning = require("../models/adminEarning");
+const ReferralEarning = require("../models/referralEarning");
+
 const { createCustomerFromShipment } = require("./customerController");
 const { fetchWaybill } = require("../services/delhiveryService");
 
