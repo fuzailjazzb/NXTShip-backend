@@ -21,7 +21,7 @@ exports.bookShipment = async (req, res) => {
              STEP 0 — REQUEST DEBUG
           ====================================================== */
   
-          console.log("🔎 Middleware Customer:", req.customer);
+          console.log("🔎 Middleware Customer:", req.user);
           console.log("🔎 Request Headers:", req.headers);
           console.log("🔎 Request Body:", req.body);
   
@@ -29,11 +29,11 @@ exports.bookShipment = async (req, res) => {
   
           console.log("✅ Body Parsed Successfully");
   
-          req.user = req.customer;
+          const user = req.user;
   
           console.log("👤 req.user assigned:", req.user);
   
-          if (!req.user || !req.user._id) {
+          if (!user || !user._id) {
               console.log("❌ USER INVALID OR MISSING");
               return res.status(401).json({
                   success: false,
@@ -41,7 +41,7 @@ exports.bookShipment = async (req, res) => {
               });
           }
   
-          shipmentData.customerId = req.user._id;
+          shipmentData.customerId = user._id;
   
           console.log("✅ CustomerId attached:", shipmentData.customerId);
   
