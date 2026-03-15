@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Shipment = require("../models/shipment");
+const Warehouse = require("../models/warehouse");
 const Customer = require("../models/customer");
 const Commission = require("../models/commission");
 const AdminEarning = require("../models/adminEarning");
@@ -245,8 +246,25 @@ exports.bookShipment = async (req, res) => {
     console.log("After:", customer.walletBalance);
 
     /* =====================================================
-       STEP 8 — SAVE SHIPMENT
+       STEP 7.5 — fetch Warehouse
     ====================================================== */
+
+    console.log("Fetching Warehouse...");
+
+    const warehouse = await Warehouse.findById(shipmentData.warehouseId);
+
+    console.log("Warehouse DB Response");
+
+    if (!warehouse) {
+      console.log("Warehouse not found");
+
+      return res.status(404).json({
+        success: true,
+        message: "Warehouse Not Found"
+      });
+    }
+
+    console.log("Warehouse Found", warehouse.name);
 
     /* =====================================================
 STEP 8 — SAVE SHIPMENT
