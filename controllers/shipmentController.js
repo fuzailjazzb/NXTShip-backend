@@ -291,13 +291,12 @@ STEP 8 — SAVE SHIPMENT
       customerId: shipmentData.customerId,
       warehouseId: warehouse.id,
 
-      /* =========================
-         DELIVERY ADDRESS
-      ========================== */
+      /*=========================
+        DELIVERY ADDRESS
+        =========================*/
 
       delivery: {
-
-        name: shipmentData.customerName,
+        customerName: shipmentData.customerName,
         phone: shipmentData.phone,
         address: shipmentData.address,
         city: shipmentData.city,
@@ -305,10 +304,9 @@ STEP 8 — SAVE SHIPMENT
         pincode: shipmentData.pincode
       },
 
-
       /* =========================
          PICKUP (WAREHOUSE)
-      ========================== */
+      ========================= */
 
       pickup: {
         name: warehouse.name,
@@ -321,10 +319,10 @@ STEP 8 — SAVE SHIPMENT
 
       /* =========================
          PRODUCT DETAILS
-      ========================== */
+      ========================= */
 
       product: {
-        name: shipmentData.productName || "General Item",
+        productName: shipmentData.productName || "General Item",
         quantity: shipmentData.quantity || 1,
         weight: shipmentData.weight || 0.5,
         orderValue: shipmentData.orderValue || 0
@@ -332,12 +330,13 @@ STEP 8 — SAVE SHIPMENT
 
       /* =========================
          SELLER DETAILS
-      ========================== */
+      ========================= */
 
       seller: {
-        name: warehouse.name,
+        sellerName: warehouse.name,
         gst: shipmentData.sellerGST || "NA"
       }
+
     });
 
     console.log("✅ Shipment Saved Successfully");
