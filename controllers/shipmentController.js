@@ -40,7 +40,7 @@ exports.bookShipment = async (req, res) => {
     console.log("👤 req.user assigned:", req.user);
 
     if (!user || !user.id) {
-      console.log("❌ USER INVALID OR MISSING");
+      console.log("❌ USER INVALID OR MISSING", user);
       return res.status(401).json({
         success: false,
         message: "unauthorized usersss"
@@ -207,6 +207,9 @@ exports.bookShipment = async (req, res) => {
     );
 
     console.log("✅ Delhivery Response:", response.data);
+    console.log("Packages : ", response.data?.packages);
+    console.log("First Package : ", response.data?.packages?.[0]);
+
 
     if (response.data?.packages?.[0]?.serviceable === false) {
       return res.status(400).json({
@@ -250,13 +253,20 @@ exports.bookShipment = async (req, res) => {
     ====================================================== */
 
     console.log("Fetching Warehouse...");
+    console.log("Incoming Warehouse Id :", shipmentData.warehouseId);
+    console.log("Type Of Warehouse : ", typeof shipmentData.warehouseId);
+
+    if (!shipmentData.warehouseId) {
+      console.log("~~~~~~~~~ Warehouse Not Recieved From Frontend ~~~~~~~~~");
+    }
 
     const warehouse = await Warehouse.findById(shipmentData.warehouseId);
 
+    console.log("Warehouse DB Result : ", warehouse);
     console.log("Warehouse DB Response");
 
     if (!warehouse) {
-      console.log("Warehouse not found");
+      console.log("Warehouse not found in db");
 
       return res.status(404).json({
         success: true,
@@ -274,6 +284,7 @@ STEP 8 — SAVE SHIPMENT
 
     console.log("ShipmentData Received:", shipmentData);
     console.log("Warehouse Object:", warehouse);
+    console.log("waybill : ", waybill);
 
     const newShipment = await Shipment.create({
 
@@ -341,6 +352,7 @@ STEP 8 — SAVE SHIPMENT
 
     console.log("✅ Shipment Saved Successfully");
     console.log("Shipment ID:", newShipment.id);
+    console.log("OrderId:", newShipment.orderId);
     console.log("Waybill:", newShipment.waybill);
     console.log("Pickup Warehouse:", newShipment.pickup);
     console.log("Delivery Address:", newShipment.delivery);
