@@ -5,37 +5,36 @@ module.exports = async function delhiveryLabel(shipment) {
     console.log("\n========== 🚀 DELHIVERY LABEL GENERATOR START ==========");
 
     /* =========================================
-       🔍 INPUT CHECK
+       ✅ BASIC VALIDATION
     ========================================= */
-    console.log("📥 Incoming Shipment Object:", shipment);
-
     if (!shipment) {
-      console.log("❌ ERROR: Shipment object is missing");
-      throw new Error("Shipment object missing");
+      throw new Error("❌ Shipment object missing");
     }
 
+    console.log("📥 Incoming Shipment Object:", shipment);
     console.log("🆔 Shipment ID:", shipment._id);
     console.log("🚚 Courier:", shipment.courier);
     console.log("📦 Order ID:", shipment.orderId);
+
     console.log("📊 Full Shipment Keys:", Object.keys(shipment));
 
     /* =========================================
        ✅ AWB DETECTION
     ========================================= */
     console.log("\n🔎 Checking AWB...");
-    const awb = shipment.waybill || shipment.awb;
-
     console.log("📌 shipment.waybill:", shipment.waybill);
     console.log("📌 shipment.awb:", shipment.awb);
-    console.log("✅ Final AWB Used:", awb);
+
+    const awb = shipment.waybill || shipment.awb;
 
     if (!awb) {
-      console.log("❌ ERROR: AWB missing");
-      throw new Error("AWB missing");
+      throw new Error("❌ AWB missing in shipment");
     }
 
+    console.log("✅ Final AWB Used:", awb);
+
     /* =========================================
-       🌐 DELHIVERY LABEL API CALL
+       ✅ CALL DELHIVERY API
     ========================================= */
     const url = `https://track.delhivery.com/api/p/packing_slip?wbns=${awb}&pdf=true`;
 
@@ -55,37 +54,53 @@ module.exports = async function delhiveryLabel(shipment) {
     console.log("📦 PDF Size (bytes):", response.data?.length);
 
     /* =========================================
-       🧠 DATA EXTRACTION DEBUG
+       ✅ EXTRACT NESTED DATA (FIXED)
     ========================================= */
+
     console.log("\n🔍 Extracting Shipment Fields...");
 
-    console.log("👤 Customer Name:", shipment.customerName);
-    console.log("📞 Phone:", shipment.phone);
-    console.log("🏠 Address:", shipment.address);
-    console.log("🏙 City:", shipment.city);
-    console.log("🌍 State:", shipment.state);
-    console.log("📮 Pincode:", shipment.pincode);
+    // DELIVERY
+    const delivery = {
+      name: shipment.delivery?.customerName || null,
+      phone: shipment.delivery?.phone || null,
+      address: shipment.delivery?.address || null,
+      city: shipment.delivery?.city || null,
+      state: shipment.delivery?.state || null,
+      pincode: shipment.delivery?.pincode || null,
+    };
 
-    console.log("\n🏢 Warehouse Info:");
-    console.log("Name:", shipment.warehouseName);
-    console.log("Phone:", shipment.warehousePhone);
-    console.log("Address:", shipment.warehouseAddress);
-    console.log("City:", shipment.warehouseCity);
-    console.log("State:", shipment.warehouseState);
-    console.log("Pincode:", shipment.warehousePincode);
+    console.log("🚚 Delivery Data:", delivery);
 
-    console.log("\n📦 Product Info:");
-    console.log("Name:", shipment.productName);
-    console.log("Quantity:", shipment.quantity);
-    console.log("Weight:", shipment.weight);
-    console.log("Order Value:", shipment.orderValue);
+    // PICKUP (WAREHOUSE)
+    const pickup = {
+      name: shipment.pickup?.name || "Default Warehouse",
+      phone: shipment.pickup?.phone || null,
+      address: shipment.pickup?.address || null,
+      city: shipment.pickup?.city || null,
+      state: shipment.pickup?.state || null,
+      pincode: shipment.pickup?.pincode || null,
+    };
+
+    console.log("🏢 Pickup Data:", pickup);
+
+    // PRODUCT
+    const product = {
+      name: shipment.product?.productName || null,
+      quantity: shipment.product?.quantity || 1,
+      weight: shipment.product?.weight || null,
+      orderValue: shipment.product?.orderValue || null,
+    };
+
+    console.log("📦 Product Data:", product);
 
     /* =========================================
-       ✅ SAFE DATA STRUCTURE
+       ✅ FINAL SAFE DATA
     ========================================= */
+
     console.log("\n🛠 Building safeData object...");
 
     const safeData = {
+      success: true,
       awb: awb,
       labelUrl: url,
       labelData: response.data,
@@ -96,30 +111,9 @@ module.exports = async function delhiveryLabel(shipment) {
         status: shipment.status || null,
         courier: shipment.courier || null,
 
-        delivery: {
-          name: shipment.customerName || null,
-          phone: shipment.phone || null,
-          address: shipment.address || null,
-          city: shipment.city || null,
-          state: shipment.state || null,
-          pincode: shipment.pincode || null,
-        },
-
-        pickup: {
-          name: shipment.warehouseName || "Default Warehouse",
-          phone: shipment.warehousePhone || null,
-          address: shipment.warehouseAddress || null,
-          city: shipment.warehouseCity || null,
-          state: shipment.warehouseState || null,
-          pincode: shipment.warehousePincode || null,
-        },
-
-        product: {
-          name: shipment.productName || null,
-          quantity: shipment.quantity || 1,
-          weight: shipment.weight || null,
-          orderValue: shipment.orderValue || null,
-        },
+        delivery,
+        pickup,
+        product,
 
         seller: {
           name: "KING NXT",
@@ -128,39 +122,29 @@ module.exports = async function delhiveryLabel(shipment) {
       },
     };
 
-    /* =========================================
-       📤 FINAL DEBUG OUTPUT
-    ========================================= */
     console.log("\n📦 FINAL SAFE DATA (WITHOUT PDF):");
-
     console.log("AWB:", safeData.awb);
     console.log("OrderId:", safeData.shipmentData.orderId);
     console.log("Courier:", safeData.shipmentData.courier);
+    console.log("🚚 Delivery:", safeData.shipmentData.delivery);
+    console.log("🏢 Pickup:", safeData.shipmentData.pickup);
+    console.log("📦 Product:", safeData.shipmentData.product);
 
-    console.log("\n🚚 Delivery:");
-    console.log(safeData.shipmentData.delivery);
-
-    console.log("\n🏢 Pickup:");
-    console.log(safeData.shipmentData.pickup);
-
-    console.log("\n📦 Product:");
-    console.log(safeData.shipmentData.product);
-
-    console.log("\n========== ✅ DELHIVERY LABEL SUCCESS ==========\n");
+    console.log("\n========== ✅ DELHIVERY LABEL SUCCESS ==========");
 
     return safeData;
 
   } catch (error) {
-    console.log("\n❌❌❌ DELHIVERY LABEL ERROR ❌❌❌");
+    console.log("\n====== ❌ DELHIVERY LABEL ERROR ======");
 
     if (error.response) {
-      console.log("🌐 API Error Status:", error.response.status);
-      console.log("📄 API Error Data:", error.response.data);
+      console.log("📡 Delhivery API Error Status:", error.response.status);
+      console.log("📡 Delhivery API Error Data:", error.response.data);
     } else {
-      console.log("⚠️ Internal Error Message:", error.message);
+      console.log("🔥 Internal Error:", error.message);
     }
 
-    console.log("==============================================\n");
+    console.log("======================================\n");
 
     throw error;
   }
