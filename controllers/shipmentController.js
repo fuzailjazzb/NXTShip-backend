@@ -301,6 +301,7 @@ STEP 8 — SAVE SHIPMENT
       createdAt: new Date(),
       customerId: shipmentData.customerId,
       warehouseId: warehouse.id,
+      productName: shipmentData.productName || "General Item",
 
       /*=========================
         DELIVERY ADDRESS
