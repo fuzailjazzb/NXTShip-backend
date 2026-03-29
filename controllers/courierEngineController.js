@@ -15,6 +15,7 @@ const { trackShipment } = require("./shipmentController");
 // shipfast import
 const { createShipment: bookShipfastShipment } = require("./courier/shipfadtControllerAll");
 const { trackShipment: trackShipfastShipment } = require("./courier/shipfadtControllerAll");
+const { shipfastRates: getRates } = require("./courier/shipfadtControllerAll");
 const { checkServiceability: checkServiceability } = require("./courier/shipfadtControllerAll");
 const { cancelShipment: cancelShipment } = require("./courier/shipfadtControllerAll");
 
@@ -182,14 +183,36 @@ exports.getCourierRecommendations = async (req, res) => {
 
         }
 
+        /* ---------------- SHIPFAST (MULTI OPTION 🔥) ---------------- */
 
-        /* ---------------- SHIPFAST ---------------- */
+        try {
 
-        couriers.push({
-            name: "Shipfast",
-            price: "Dynamic",
-            deliveryDays: "Auto"
-        });
+            const shipfastRates = await getRates({
+                fromPincode,
+                toPincode,
+                weight,
+                orderValue: paymentType === "COD" ? 1 : 0
+            });
+
+            if (shipfastRates?.success && shipfastRates.data.length) {
+
+                shipfastRates.data.forEach(carrier => {
+
+                    couriers.push({
+                        name: carrier.courier,   // 🔥 dynamic name
+                        courierType: "shipfast",
+                        carrier_id: carrier.carrier_id,
+                        price: "Dynamic",        // no rate API
+                        deliveryDays: "Auto"
+                    });
+
+                });
+
+            }
+
+        } catch (err) {
+            console.log("❌ Shipfast rate error", err.message);
+        }
 
 
         /* ---------------- RESPONSE ---------------- */

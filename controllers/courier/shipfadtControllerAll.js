@@ -4,27 +4,37 @@ const { getToken } = require("./shipfastAuthService");
 const BASE_URL = process.env.SHIPFAST_BASE_URL;
 
 /* =====================================================
-   🔧 HELPER: SAFE VALUE EXTRACTOR
+   🔧 HELPER
 ===================================================== */
 const getValue = (obj, path, fallback = null) => {
     return path.split('.').reduce((o, k) => (o || {})[k], obj) ?? fallback;
 };
 
 /* =====================================================
-   1. SERVICEABILITY (PINCODE CHECK)
+   1. PINCODE SERVICEABILITY
 ===================================================== */
-exports.checkServiceability = async (pickupPincode, deliveryPincode, paymentType) => {
+exports.checkServiceability = async (shipment) => {
     try {
+
         const token = await getToken();
 
-        console.log("📍 Checking serviceability...");
+        const pickupPincode =
+            getValue(shipment, "pickup.pincode") || shipment.fromPincode;
+
+        const deliveryPincode =
+            getValue(shipment, "delivery.pincode") || shipment.toPincode;
+
+        const paymentType =
+            getValue(shipment, "product.orderValue", 0) > 0 ? "cod" : "prepaid";
+
+        console.log("📍 Checking serviceability...", pickupPincode, deliveryPincode);
 
         const res = await axios.post(
             `${BASE_URL}/serviceability`,
             {
                 from: pickupPincode,
                 to: deliveryPincode,
-                payment_mode: paymentType === "COD" ? "cod" : "prepaid",
+                payment_mode: paymentType,
                 shipment_type: "forward"
             },
             {
@@ -32,7 +42,7 @@ exports.checkServiceability = async (pickupPincode, deliveryPincode, paymentType
             }
         );
 
-        console.log("✅ Serviceability Response:", JSON.stringify(res.data, null, 2));
+        console.log("✅ Serviceability:", JSON.stringify(res.data, null, 2));
 
         return {
             success: true,
@@ -40,6 +50,7 @@ exports.checkServiceability = async (pickupPincode, deliveryPincode, paymentType
         };
 
     } catch (err) {
+
         console.error("❌ Serviceability Error:", err.response?.data || err.message);
 
         return {
@@ -50,38 +61,50 @@ exports.checkServiceability = async (pickupPincode, deliveryPincode, paymentType
 };
 
 /* =====================================================
-   2. RATE (DERIVED FROM SERVICEABILITY)
+   2. GET RATES (ESTIMATED)
 ===================================================== */
 exports.getRates = async (shipment) => {
     try {
-        const pickupPincode =
-            getValue(shipment, "pickup.pincode") || shipment.fromPincode;
 
-        const deliveryPincode =
-            getValue(shipment, "delivery.pincode") || shipment.toPincode;
-
-        const paymentType =
-            getValue(shipment, "product.orderValue", 0) > 0 ? "COD" : "PREPAID";
-
-        const service = await exports.checkServiceability(
-            pickupPincode,
-            deliveryPincode,
-            paymentType
-        );
+        const service = await exports.checkServiceability(shipment);
 
         if (!service.success) throw new Error("Serviceability failed");
 
         const carriers = service.data.serviceability_results || [];
+        const zone = service.data.zone;
+
+        const weight =
+            getValue(shipment, "product.weight", 1) || shipment.weight || 1;
+
+        // zone based estimation
+        const zoneDeliveryMap = {
+            zone_a: 1,
+            zone_b: 2,
+            zone_c: 3,
+            zone_d: 5,
+            zone_e: 7
+        };
+
+        const zoneMultiplier = {
+            zone_a: 1,
+            zone_b: 1.2,
+            zone_c: 1.5,
+            zone_d: 2,
+            zone_e: 2.5
+        };
 
         return {
             success: true,
             data: carriers.map(c => ({
                 courier: c.carrier_name,
-                carrier_id: c.carrier_id
+                carrier_id: c.carrier_id,
+                price: 40 + (weight * 10 * (zoneMultiplier[zone] || 1)), // estimated
+                deliveryDays: zoneDeliveryMap[zone] || 5
             }))
         };
 
     } catch (err) {
+
         console.error("❌ Rate Error:", err.message);
 
         return {
@@ -92,16 +115,17 @@ exports.getRates = async (shipment) => {
 };
 
 /* =====================================================
-   3. CREATE SHIPMENT
+   3. CREATE SHIPMENT (REAL BOOKING)
 ===================================================== */
 exports.createShipment = async (shipment) => {
     try {
+
         console.log("🚀 [Shipfast] CREATE ORDER START");
 
         const token = await getToken();
 
         // ======================
-        // SAFE EXTRACTION
+        // EXTRACT DATA
         // ======================
         const pickupPincode =
             getValue(shipment, "pickup.pincode") || shipment.fromPincode;
@@ -139,17 +163,13 @@ exports.createShipment = async (shipment) => {
         const warehouse = shipment.pickup || shipment.warehouse;
 
         if (!pickupPincode || !deliveryPincode) {
-            throw new Error("Pincode missing in shipment");
+            throw new Error("Missing pincode");
         }
 
         // ======================
         // SERVICEABILITY
         // ======================
-        const service = await exports.checkServiceability(
-            pickupPincode,
-            deliveryPincode,
-            orderValue > 0 ? "COD" : "PREPAID"
-        );
+        const service = await exports.checkServiceability(shipment);
 
         if (!service.success || !service.data.serviceability_results?.length) {
             throw new Error("No carriers available");
@@ -160,7 +180,7 @@ exports.createShipment = async (shipment) => {
         console.log("🚚 Selected Carrier:", carrier_id);
 
         // ======================
-        // CREATE ORDER PAYLOAD
+        // PAYLOAD
         // ======================
         const payload = {
             order_id: shipment.orderId || `NXT_${Date.now()}`,
@@ -194,7 +214,7 @@ exports.createShipment = async (shipment) => {
             length: shipment.length || 10,
             breadth: shipment.width || 10,
             height: shipment.height || 10,
-            weight: weight,
+            weight,
 
             pickup_location: warehouse?.name,
             warehouse_id: warehouse?.shipfastWarehouseId,
@@ -210,7 +230,7 @@ exports.createShipment = async (shipment) => {
             }
         };
 
-        console.log("📦 Final Payload:", JSON.stringify(payload, null, 2));
+        console.log("📦 Payload:", JSON.stringify(payload, null, 2));
 
         const res = await axios.post(
             `${BASE_URL}/forward-order-orchestration`,
@@ -235,6 +255,7 @@ exports.createShipment = async (shipment) => {
         };
 
     } catch (err) {
+
         console.error("❌ Create Shipment Error:", err.response?.data || err.message);
 
         return {
@@ -249,6 +270,7 @@ exports.createShipment = async (shipment) => {
 ===================================================== */
 exports.trackShipment = async (awb) => {
     try {
+
         const token = await getToken();
 
         const res = await axios.post(
@@ -263,6 +285,9 @@ exports.trackShipment = async (awb) => {
         };
 
     } catch (err) {
+
+        console.error("❌ Tracking Error:", err.response?.data || err.message);
+
         return {
             success: false,
             error: err.response?.data || err.message
@@ -275,6 +300,7 @@ exports.trackShipment = async (awb) => {
 ===================================================== */
 exports.cancelShipment = async (awb) => {
     try {
+
         const token = await getToken();
 
         const res = await axios.post(
@@ -289,6 +315,9 @@ exports.cancelShipment = async (awb) => {
         };
 
     } catch (err) {
+
+        console.error("❌ Cancel Error:", err.response?.data || err.message);
+
         return {
             success: false,
             error: err.response?.data || err.message
