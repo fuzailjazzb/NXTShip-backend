@@ -15,7 +15,7 @@ const { trackShipment } = require("./shipmentController");
 // shipfast import
 const { createShipment: bookShipfastShipment } = require("./courier/shipfadtControllerAll");
 const { trackShipment: trackShipfastShipment } = require("./courier/shipfadtControllerAll");
-const { shipfastRates: getRates } = require("./courier/shipfadtControllerAll");
+const { getRates: getRates } = require("./courier/shipfadtControllerAll");
 const { checkServiceability: checkServiceability } = require("./courier/shipfadtControllerAll");
 const { cancelShipment: cancelShipment } = require("./courier/shipfadtControllerAll");
 
