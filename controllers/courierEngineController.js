@@ -10,7 +10,13 @@ const ekartLabel = require("./labels/ekartLabel");
 const shipfastLabel = require("./labels/shipfastLabel");
 
 
-const { trackShipment } = require("./shipmentController")
+const { trackShipment } = require("./shipmentController");
+
+// shipfast import
+const { createShipment: bookShipfastShipment } = require("./courier/shipfadtControllerAll");
+const { trackShipment: trackShipfastShipment } = require("./courier/shipfadtControllerAll");
+const { checkServiceability: checkServiceability } = require("./courier/shipfadtControllerAll");
+const { cancelShipment: cancelShipment } = require("./courier/shipfadtControllerAll");
 
 /* =====================================================
    COURIER ENGINE
@@ -61,6 +67,35 @@ exports.bookShipment = async (req, res) => {
             return bookEkartShipment(req, res);
 
         }
+
+        /* =====================================================
+            SHIPFAST COURIER
+        ===================================================== */
+
+        if (courier === "shipfast") {
+
+            console.log("⚡ Using Shipfast");
+
+            const response = await bookShipfastShipment(req.body);
+
+            if (!response.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Shipfast booking failed",
+                    error: response.error
+                });
+            }
+
+            console.log("✅ Shipfast Booking Success:", response.data);
+
+            return res.json({
+                success: true,
+                awb: response.data.awb,
+                labelUrl: response.data.labelUrl,
+                courier: "shipfast"
+            });
+        }
+
 
         /* =====================================================
            UNKNOWN COURIER
@@ -148,6 +183,15 @@ exports.getCourierRecommendations = async (req, res) => {
         }
 
 
+        /* ---------------- SHIPFAST ---------------- */
+
+        couriers.push({
+            name: "Shipfast",
+            price: "Dynamic",
+            deliveryDays: "Auto"
+        });
+
+
         /* ---------------- RESPONSE ---------------- */
 
         return res.json({
@@ -206,6 +250,26 @@ exports.trackShipment = async (req, res) => {
 
         }
 
+        if (courier === "shipfast") {
+
+            console.log("📍 Tracking via Shipfast");
+
+            const response = await trackShipfastShipment(waybill);
+
+            if (!response.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Shipfast tracking failed",
+                    error: response.error
+                });
+            }
+
+            return res.json({
+                success: true,
+                tracking: response.data
+            });
+        }
+
         return res.status(400).json({
             success: false,
             message: "Unsupported courier"
@@ -252,8 +316,8 @@ exports.generateLabel = async (req, res) => {
         const shipment = await Shipment.findOne({
             $or: [
                 { waybill: awb },
-                { awb: awb}
-            ] 
+                { awb: awb }
+            ]
         });
 
         console.log("Shipment DB Result:", shipment);
@@ -296,7 +360,7 @@ exports.generateLabel = async (req, res) => {
 
         }
 
-        else if (courier === "Shipfast") {
+        else if (courier === "shipfast") {
 
             console.log("📦 Routing to SHIPFAST LABEL");
 
