@@ -4,232 +4,294 @@ const { getToken } = require("./shipfastAuthService");
 const BASE_URL = process.env.SHIPFAST_BASE_URL;
 
 /* =====================================================
+   🔧 HELPER: SAFE VALUE EXTRACTOR
+===================================================== */
+const getValue = (obj, path, fallback = null) => {
+    return path.split('.').reduce((o, k) => (o || {})[k], obj) ?? fallback;
+};
+
+/* =====================================================
    1. SERVICEABILITY (PINCODE CHECK)
 ===================================================== */
 exports.checkServiceability = async (pickupPincode, deliveryPincode, paymentType) => {
-  try {
+    try {
+        const token = await getToken();
 
-    const token = await getToken();
+        console.log("📍 Checking serviceability...");
 
-    console.log("📍 Checking serviceability...");
+        const res = await axios.post(
+            `${BASE_URL}/serviceability`,
+            {
+                from: pickupPincode,
+                to: deliveryPincode,
+                payment_mode: paymentType === "COD" ? "cod" : "prepaid",
+                shipment_type: "forward"
+            },
+            {
+                headers: { Authorization: token }
+            }
+        );
 
-    const res = await axios.post(
-      `${BASE_URL}/serviceability`,
-      {
-        from: pickupPincode,
-        to: deliveryPincode,
-        payment_mode: paymentType === "COD" ? "cod" : "prepaid",
-        shipment_type: "forward"
-      },
-      {
-        headers: { Authorization: token }
-      }
-    );
+        console.log("✅ Serviceability Response:", JSON.stringify(res.data, null, 2));
 
-    console.log("✅ Serviceability Response:", JSON.stringify(res.data, null, 2));
+        return {
+            success: true,
+            data: res.data.result
+        };
 
-    return {
-      success: true,
-      data: res.data.result
-    };
+    } catch (err) {
+        console.error("❌ Serviceability Error:", err.response?.data || err.message);
 
-  } catch (err) {
-
-    console.error("❌ Serviceability Error:", err.response?.data || err.message);
-
-    return {
-      success: false,
-      error: err.response?.data || err.message
-    };
-  }
+        return {
+            success: false,
+            error: err.response?.data || err.message
+        };
+    }
 };
 
+/* =====================================================
+   2. RATE (DERIVED FROM SERVICEABILITY)
+===================================================== */
+exports.getRates = async (shipment) => {
+    try {
+        const pickupPincode =
+            getValue(shipment, "pickup.pincode") || shipment.fromPincode;
+
+        const deliveryPincode =
+            getValue(shipment, "delivery.pincode") || shipment.toPincode;
+
+        const paymentType =
+            getValue(shipment, "product.orderValue", 0) > 0 ? "COD" : "PREPAID";
+
+        const service = await exports.checkServiceability(
+            pickupPincode,
+            deliveryPincode,
+            paymentType
+        );
+
+        if (!service.success) throw new Error("Serviceability failed");
+
+        const carriers = service.data.serviceability_results || [];
+
+        return {
+            success: true,
+            data: carriers.map(c => ({
+                courier: c.carrier_name,
+                carrier_id: c.carrier_id
+            }))
+        };
+
+    } catch (err) {
+        console.error("❌ Rate Error:", err.message);
+
+        return {
+            success: false,
+            error: err.message
+        };
+    }
+};
 
 /* =====================================================
-   2. CREATE SHIPMENT
+   3. CREATE SHIPMENT
 ===================================================== */
 exports.createShipment = async (shipment) => {
-  try {
+    try {
+        console.log("🚀 [Shipfast] CREATE ORDER START");
 
-    console.log("🚀 [Shipfast] CREATE ORDER START");
+        const token = await getToken();
 
-    const token = await getToken();
+        // ======================
+        // SAFE EXTRACTION
+        // ======================
+        const pickupPincode =
+            getValue(shipment, "pickup.pincode") || shipment.fromPincode;
 
-    // ======================
-    // SERVICEABILITY FIRST
-    // ======================
-    const service = await exports.checkServiceability(
-      shipment.pickup.pincode,
-      shipment.delivery.pincode,
-      shipment.product.orderValue > 0 ? "COD" : "PREPAID"
-    );
+        const deliveryPincode =
+            getValue(shipment, "delivery.pincode") || shipment.toPincode;
 
-    if (!service.success || !service.data.serviceability_results.length) {
-      throw new Error("No carriers available");
-    }
+        const orderValue =
+            getValue(shipment, "product.orderValue", 0) || shipment.orderValue || 0;
 
-    const carrier_id = service.data.serviceability_results[0].carrier_id;
+        const customerName =
+            getValue(shipment, "delivery.name") || shipment.customerName;
 
-    console.log("🚚 Selected Carrier:", carrier_id);
+        const phone =
+            getValue(shipment, "delivery.phone") || shipment.phone;
 
-    // ======================
-    // CREATE ORDER PAYLOAD
-    // ======================
-    const payload = {
-      order_id: `NXT_${Date.now()}`,
-      order_date: new Date().toISOString().slice(0, 16).replace("T", " "),
-      carrier_id,
+        const address =
+            getValue(shipment, "delivery.address") || shipment.address;
 
-      billing_customer_name: shipment.delivery.name,
-      billing_address: shipment.delivery.address,
-      billing_city: shipment.delivery.city,
-      billing_pincode: shipment.delivery.pincode,
-      billing_state: shipment.delivery.state,
-      billing_country: "India",
-      billing_phone: shipment.delivery.phone,
+        const city =
+            getValue(shipment, "delivery.city") || shipment.city;
 
-      shipping_is_billing: true,
-      print_label: true,
+        const state =
+            getValue(shipment, "delivery.state") || shipment.state;
 
-      order_items: [
-        {
-          name: shipment.product.name,
-          sku: "SKU001",
-          units: shipment.product.quantity,
-          selling_price: shipment.product.orderValue,
-          discount: 0,
-          tax: 0
+        const weight =
+            getValue(shipment, "product.weight", 1) || shipment.weight || 1;
+
+        const quantity =
+            getValue(shipment, "product.quantity", 1) || shipment.quantity || 1;
+
+        const productName =
+            getValue(shipment, "product.name") || shipment.productName || "Item";
+
+        const warehouse = shipment.pickup || shipment.warehouse;
+
+        if (!pickupPincode || !deliveryPincode) {
+            throw new Error("Pincode missing in shipment");
         }
-      ],
 
-      payment_method: shipment.product.orderValue > 0 ? "COD" : "PREPAID",
-      sub_total: shipment.product.orderValue,
-      cod_collectible: shipment.product.orderValue,
+        // ======================
+        // SERVICEABILITY
+        // ======================
+        const service = await exports.checkServiceability(
+            pickupPincode,
+            deliveryPincode,
+            orderValue > 0 ? "COD" : "PREPAID"
+        );
 
-      length: 10,
-      breadth: 10,
-      height: 10,
-      weight: shipment.product.weight,
+        if (!service.success || !service.data.serviceability_results?.length) {
+            throw new Error("No carriers available");
+        }
 
-      pickup_location: "Primary",
-      warehouse_id: process.env.SHIPFAST_WAREHOUSE_ID,
+        const carrier_id = service.data.serviceability_results[0].carrier_id;
 
-      vendor_details: {
-        name: shipment.pickup.name,
-        address: shipment.pickup.address,
-        city: shipment.pickup.city,
-        state: shipment.pickup.state,
-        country: "India",
-        pin_code: shipment.pickup.pincode,
-        phone: shipment.pickup.phone
-      }
-    };
+        console.log("🚚 Selected Carrier:", carrier_id);
 
-    console.log("📦 Final Payload:", JSON.stringify(payload, null, 2));
+        // ======================
+        // CREATE ORDER PAYLOAD
+        // ======================
+        const payload = {
+            order_id: shipment.orderId || `NXT_${Date.now()}`,
+            order_date: new Date().toISOString().slice(0, 16).replace("T", " "),
+            carrier_id,
 
-    const res = await axios.post(
-      `${BASE_URL}/forward-order-orchestration`,
-      payload,
-      {
-        headers: { Authorization: token }
-      }
-    );
+            billing_customer_name: customerName,
+            billing_address: address,
+            billing_city: city,
+            billing_pincode: deliveryPincode,
+            billing_state: state,
+            billing_country: "India",
+            billing_phone: phone,
 
-    console.log("✅ Order Response:", JSON.stringify(res.data, null, 2));
+            shipping_is_billing: true,
+            print_label: true,
 
-    const data = res.data.payload;
+            order_items: [{
+                name: productName,
+                sku: shipment.sku || "SKU001",
+                units: quantity,
+                selling_price: orderValue,
+                discount: 0,
+                tax: 0
+            }],
 
-    return {
-      success: true,
-      data: {
-        awb: data.awb_code,
-        labelUrl: data.label_url,
-        courierName: data.courier_name,
-        charges: data.charges
-      }
-    };
+            payment_method: orderValue > 0 ? "COD" : "PREPAID",
+            sub_total: orderValue,
+            cod_collectible: orderValue,
 
-  } catch (err) {
+            length: shipment.length || 10,
+            breadth: shipment.width || 10,
+            height: shipment.height || 10,
+            weight: weight,
 
-    console.error("❌ Create Shipment Error:", err.response?.data || err.message);
+            pickup_location: warehouse?.name,
+            warehouse_id: warehouse?.shipfastWarehouseId,
 
-    return {
-      success: false,
-      error: err.response?.data || err.message
-    };
-  }
+            vendor_details: {
+                name: warehouse?.name,
+                address: warehouse?.address,
+                city: warehouse?.city,
+                state: warehouse?.state,
+                country: "India",
+                pin_code: pickupPincode,
+                phone: warehouse?.phone
+            }
+        };
+
+        console.log("📦 Final Payload:", JSON.stringify(payload, null, 2));
+
+        const res = await axios.post(
+            `${BASE_URL}/forward-order-orchestration`,
+            payload,
+            {
+                headers: { Authorization: token }
+            }
+        );
+
+        console.log("✅ Order Response:", JSON.stringify(res.data, null, 2));
+
+        const data = res.data.payload;
+
+        return {
+            success: true,
+            data: {
+                awb: data.awb_code,
+                labelUrl: data.label_url,
+                courierName: data.courier_name,
+                charges: data.charges
+            }
+        };
+
+    } catch (err) {
+        console.error("❌ Create Shipment Error:", err.response?.data || err.message);
+
+        return {
+            success: false,
+            error: err.response?.data || err.message
+        };
+    }
 };
 
-
 /* =====================================================
-   3. TRACK SHIPMENT
+   4. TRACK SHIPMENT
 ===================================================== */
 exports.trackShipment = async (awb) => {
-  try {
+    try {
+        const token = await getToken();
 
-    const token = await getToken();
+        const res = await axios.post(
+            `${BASE_URL}/order-tracking`,
+            { awbs: [awb] },
+            { headers: { Authorization: token } }
+        );
 
-    console.log("📍 Tracking AWB:", awb);
+        return {
+            success: true,
+            data: res.data.result[awb]
+        };
 
-    const res = await axios.post(
-      `${BASE_URL}/order-tracking`,
-      { awbs: [awb] },
-      {
-        headers: { Authorization: token }
-      }
-    );
-
-    console.log("✅ Tracking Response:", JSON.stringify(res.data, null, 2));
-
-    return {
-      success: true,
-      data: res.data.result[awb]
-    };
-
-  } catch (err) {
-
-    console.error("❌ Tracking Error:", err.response?.data || err.message);
-
-    return {
-      success: false,
-      error: err.response?.data || err.message
-    };
-  }
+    } catch (err) {
+        return {
+            success: false,
+            error: err.response?.data || err.message
+        };
+    }
 };
 
-
 /* =====================================================
-   4. CANCEL SHIPMENT
+   5. CANCEL SHIPMENT
 ===================================================== */
 exports.cancelShipment = async (awb) => {
-  try {
+    try {
+        const token = await getToken();
 
-    const token = await getToken();
+        const res = await axios.post(
+            `${BASE_URL}/cancel-order`,
+            { awbs: [awb] },
+            { headers: { Authorization: token } }
+        );
 
-    console.log("❌ Cancelling AWB:", awb);
+        return {
+            success: true,
+            data: res.data
+        };
 
-    const res = await axios.post(
-      `${BASE_URL}/cancel-order`,
-      { awbs: [awb] },
-      {
-        headers: { Authorization: token }
-      }
-    );
-
-    console.log("✅ Cancel Response:", res.data);
-
-    return {
-      success: true,
-      data: res.data
-    };
-
-  } catch (err) {
-
-    console.error("❌ Cancel Error:", err.response?.data || err.message);
-
-    return {
-      success: false,
-      error: err.response?.data || err.message
-    };
-  }
+    } catch (err) {
+        return {
+            success: false,
+            error: err.response?.data || err.message
+        };
+    }
 };
