@@ -199,11 +199,11 @@ exports.getCourierRecommendations = async (req, res) => {
                 shipfastRates.data.forEach(carrier => {
 
                     couriers.push({
-                        name: carrier.courier,   // 🔥 dynamic name
-                        courierType: "shipfast",
-                        carrier_id: carrier.carrier_id,
-                        price: "Dynamic",        // no rate API
-                        deliveryDays: "Auto"
+                        name: carrier.courier,
+                        courierType: "shipfast",   // 🔥 MUST
+                        carrier_id: carrier.carrier_id, // 🔥 MUST
+                        price: carrier.price || "Dynamic",
+                        deliveryDays: carrier.deliveryDays || "Auto"
                     });
 
                 });
