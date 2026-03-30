@@ -29,11 +29,15 @@ exports.bookShipment = async (req, res) => {
 
     try {
 
+        console.log("=====================================");
         console.log("🚚 COURIER ENGINE STARTED");
+
+        console.log("📦 FULL REQUEST BODY:", JSON.stringify(req.body, null, 2));
 
         const courier = req.body.courier;
 
-        console.log("User Selected Courier:", courier);
+        console.log("📌 Extracted Courier:", courier);
+        console.log("📌 Type of courier:", typeof courier);
 
         /* =====================================================
            IF NO COURIER SELECTED
@@ -77,7 +81,11 @@ exports.bookShipment = async (req, res) => {
 
             console.log("⚡ Using Shipfast");
 
+            console.log("📦 Incoming Payload for Shipfast:", req.body);
+
             const response = await bookShipfastShipment(req.body);
+
+            console.log("📦 Shipfast Raw Response:", response);
 
             if (!response.success) {
                 return res.status(500).json({
@@ -183,35 +191,59 @@ exports.getCourierRecommendations = async (req, res) => {
 
         }
 
-        /* ---------------- SHIPFAST (MULTI OPTION 🔥) ---------------- */
+        /* ---------------- SHIPFAST ---------------- */
 
         try {
 
-            const shipfastRates = await getRates({
+            console.log("⚡ [Shipfast] RATE START");
+
+            const shipfastRate = await getRates({
                 fromPincode,
                 toPincode,
                 weight,
-                orderValue: paymentType === "COD" ? 1 : 0
+                paymentType
             });
 
-            if (shipfastRates?.success && shipfastRates.data.length) {
+            console.log("📦 Raw Shipfast Rate Response:", JSON.stringify(shipfastRate, null, 2));
 
-                shipfastRates.data.forEach(carrier => {
+            if (!shipfastRate || !shipfastRate.success) {
+
+                console.log("❌ Shipfast rate failed or empty");
+
+            } else {
+
+                const carriers = shipfastRate.data || [];
+
+                console.log("📦 Shipfast Carriers Count:", carriers.length);
+
+                carriers.forEach((carrier, index) => {
+
+                    console.log(`🔍 Processing Carrier [${index}]`, carrier);
+
+                    if (!carrier || !carrier.carrier_id) {
+                        console.log("⚠️ Skipping invalid carrier:", carrier);
+                        return;
+                    }
 
                     couriers.push({
-                        name: carrier.courier,
-                        courierType: "shipfast",   // 🔥 MUST
-                        carrier_id: carrier.carrier_id, // 🔥 MUST
+                        name: carrier.courier || "Shipfast Courier",
+                        courierType: "shipfast",           // 🔥 MUST
+                        carrier_id: carrier.carrier_id,    // 🔥 MUST
+
+                        // 🔥 SAFE FALLBACKS (NO UNDEFINED)
                         price: carrier.price || "Dynamic",
                         deliveryDays: carrier.deliveryDays || "Auto"
                     });
 
                 });
 
+                console.log("✅ Shipfast Couriers Added:", couriers.length);
+
             }
 
         } catch (err) {
-            console.log("❌ Shipfast rate error", err.message);
+
+            console.log("❌ Shipfast rate error:", err.message);
         }
 
 
