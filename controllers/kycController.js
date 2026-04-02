@@ -1,5 +1,7 @@
 const Kyc = require("../models/kyc");
 
+// submit kyc
+
 exports.submitKyc = async (req, res) => {
 
     try {
@@ -90,6 +92,41 @@ exports.submitKyc = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "KYC failed"
+        });
+
+    }
+};
+
+// GET USER KYC
+
+exports.getKyc = async (req, res) => {
+
+    try {
+
+        const userId = req.user.id;
+
+        console.log("📥 Fetching KYC for user:", userId);
+
+        const kyc = await Kyc.findOne({ userId });
+
+        if (!kyc) {
+            return res.json({
+                success: true,
+                data: null
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: kyc
+        });
+
+    } catch (err) {
+
+        console.log("❌ KYC Fetch Error:", err.message);
+
+        return res.status(500).json({
+            success: false
         });
 
     }
