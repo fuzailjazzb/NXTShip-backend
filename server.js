@@ -66,7 +66,7 @@ app.use("/api", warehouseRoutes);
 app.use("/label-api", labelRoutes);
 
 // kyc upload
-app.use("/api", kycRoutes);
+app.use("/api/kyc", kycRoutes);
 
 
 
