@@ -4,97 +4,67 @@ const Kyc = require("../models/kyc");
 
 exports.submitKyc = async (req, res) => {
 
-    try {
+  try {
 
-        console.log("📥 Incoming KYC Request");
+    const userId = req.user.id;
 
-        const { type, name, number } = req.body;
-        const file = req.file;
+    console.log("📥 KYC BODY:", req.body);
+    console.log("📸 FILE:", req.file);
 
-        const userId = req.user.id;
+    const { type, name, number } = req.body;
 
-        console.log("📦 Body:", req.body);
-        console.log("📦 File:", file);
+    if (!type || !name || !number || !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required"
+      });
+    }
 
-        if (!type || !name || !number || !file) {
-            return res.status(400).json({
-                success: false,
-                message: "Missing fields"
-            });
-        }
+    const existing = await Kyc.findOne({ userId });
 
-        let details = {};
+    const kycData = {
+      userId,
+      type,
+      details: {
+        name,
+        number
+      },
+      documentUrl: `uploads/kyc/${req.file.filename}`,
+      status: "pending"
+    };
 
-        /* =========================
-           🔥 SWITCH VALIDATION
-        ========================== */
+    /* =========================
+       🔥 UPDATE OR CREATE
+    ========================== */
 
-        switch (type) {
+    if (existing) {
 
-            case "aadhaar":
-                if (!number.match(/^\d{12}$/)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Invalid Aadhaar"
-                    });
-                }
-                details = { name, number };
-                break;
+      console.log("🔄 Updating existing KYC");
 
-            case "pan":
-                if (!number.match(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Invalid PAN"
-                    });
-                }
-                details = { name, number };
-                break;
+      await Kyc.updateOne({ userId }, kycData);
 
-            case "gst":
-                details = { name, number };
-                break;
+    } else {
 
-            case "bank":
-                details = { name, number };
-                break;
+      console.log("🆕 Creating new KYC");
 
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid KYC type"
-                });
-        }
-
-        /* =========================
-           💾 SAVE
-        ========================== */
-
-        const kyc = await Kyc.create({
-            userId,
-            type,
-            details,
-            documentUrl: file.path // 🔥 IMAGE SAVE
-        });
-
-        console.log("✅ KYC SAVED:", kyc._id);
-
-        return res.json({
-            success: true,
-            message: "KYC Submitted",
-            data: kyc
-        });
-
-    } catch (error) {
-
-        console.log("❌ KYC ERROR:", error.message);
-
-        return res.status(500).json({
-            success: false,
-            message: "KYC failed"
-        });
+      await Kyc.create(kycData);
 
     }
+
+    return res.json({
+      success: true,
+      message: "KYC submitted"
+    });
+
+  } catch (err) {
+
+    console.log("❌ KYC ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false
+    });
+
+  }
 };
 
 // GET USER KYC
