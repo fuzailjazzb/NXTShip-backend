@@ -25,6 +25,7 @@ app.use(cors({
 
 app.use(express.json());
 
+
 // Routes
 
 app.use((req, res, next) => {
@@ -67,6 +68,7 @@ app.use("/label-api", labelRoutes);
 
 // kyc upload
 app.use("/api/kyc", kycRoutes);
+app.use("/uploads", express.static("uploads"));
 
 
 
