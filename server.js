@@ -12,6 +12,7 @@ const walletRoutes = require("./routes/walletRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const warehouseRoutes = require("./routes/warehouseRoutes");
 const labelRoutes = require("./routes/labelRoutes");
+const kycRoutes = require("./routes/kycRoutes");
 
 const app = express();
 
@@ -63,6 +64,9 @@ app.use("/api", warehouseRoutes);
 
 // label & invoive
 app.use("/label-api", labelRoutes);
+
+// kyc upload
+app.use("/api", kycRoutes);
 
 
 
