@@ -57,6 +57,29 @@ exports.connectStore = async (req, res) => {
   }
 };
 
+exports.deleteStore = async (req, res) => {
+  const userId = req.user.id;
+  const index = req.params.index;
+
+  const data = await Integration.findOne({ userId });
+
+  data.stores.splice(index, 1);
+  await data.save();
+
+  res.json({ success: true });
+};
+
+exports.toggleAutoSync = async (req, res) => {
+  const { index, value } = req.body;
+  const userId = req.user.id;
+
+  const data = await Integration.findOne({ userId });
+
+  data.stores[index].autoSync = value;
+  await data.save();
+
+  res.json({ success: true });
+};
 
 /* =====================================================
    🔄 SYNC ORDERS
