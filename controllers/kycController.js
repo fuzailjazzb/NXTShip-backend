@@ -1,5 +1,5 @@
 const cloudinary = require("../config/cloudinary");
-const KycModel = require("../models/KycModel");
+const KycModel = require("../models/kyc");
 
 /* =====================================================
    🚀 SUBMIT KYC
