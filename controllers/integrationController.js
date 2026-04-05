@@ -61,7 +61,7 @@ exports.deleteStore = async (req, res) => {
   const userId = req.user.id;
   const index = req.params.index;
 
-  const data = await Integration.findOne({ userId });
+  const data = await IntegrationModel.findOne({ userId });
 
   data.stores.splice(index, 1);
   await data.save();
