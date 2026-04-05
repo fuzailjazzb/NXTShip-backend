@@ -1,46 +1,29 @@
 const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
-
-/* =========================
-   📁 CREATE FOLDER IF NOT EXISTS
-========================== */
-
-const uploadPath = path.join(__dirname, "../uploads/kyc");
-
-if (!fs.existsSync(uploadPath)) {
-  console.log("📁 Creating KYC upload folder...");
-  fs.mkdirSync(uploadPath, { recursive: true });
-}
-
+ 
 /* =========================
    📦 STORAGE CONFIG
 ========================== */
 
-const storage = multer.diskStorage({
+const storage = multer.memoryStorage();
 
-  destination: function (req, file, cb) {
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];  
 
-    console.log("📁 Upload destination:", uploadPath);
-
-    cb(null, uploadPath);
-  },
-
-  filename: function (req, file, cb) {
-
-    const filename = Date.now() + "-" + file.originalname;
-
-    console.log("📄 Saving file as:", filename);
-
-    cb(null, filename);
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type. Only JPEG, PNG, and JPG files are allowed."));
   }
-
-});
+};
 
 /* =========================
    🚀 MULTER INIT
 ========================== */
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {fileSize: 2 * 1024 * 1024},
+  fileFilter 
+});
 
 module.exports = upload;

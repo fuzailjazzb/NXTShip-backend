@@ -18,6 +18,10 @@ const kycSchema = new mongoose.Schema({
         type: Object,
         required: true
     },
+    documentUrl: {
+        type: String,
+        required: true
+    },
 
     status: {
         type: String,
