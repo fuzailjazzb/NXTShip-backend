@@ -119,7 +119,7 @@ exports.submitKyc = async (req, res) => {
     let existingKyc;
 
     try {
-      existingKyc = await KycModel.findOne({ user: userId });
+      existingKyc = await KycModel.findOne({ userId: userId });
       console.log("📦 Existing KYC:", existingKyc);
     } catch (dbError) {
       console.log("❌ DB Find Error:", dbError);
@@ -136,7 +136,7 @@ exports.submitKyc = async (req, res) => {
     ========================== */
 
     const kycData = {
-      user: userId,
+      userId: userId,
       type,
       details: {
         name,
@@ -153,7 +153,7 @@ exports.submitKyc = async (req, res) => {
     try {
 
       savedKyc = await KycModel.findOneAndUpdate(
-        { user: userId },
+        { userId: userId },
         kycData,
         { upsert: true, new: true }
       );
@@ -223,7 +223,7 @@ exports.getKyc = async (req, res) => {
     let kyc;
 
     try {
-      kyc = await KycModel.findOne({ user: userId });
+      kyc = await KycModel.findOne({ userId: userId });
       console.log("📦 DB Result:", kyc);
     } catch (dbError) {
       console.log("❌ DB Fetch Error:", dbError);
