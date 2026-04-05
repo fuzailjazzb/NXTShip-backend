@@ -73,7 +73,7 @@ exports.toggleAutoSync = async (req, res) => {
   const { index, value } = req.body;
   const userId = req.user.id;
 
-  const data = await Integration.findOne({ userId });
+  const data = await IntegrationModel.findOne({ userId });
 
   data.stores[index].autoSync = value;
   await data.save();
