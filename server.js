@@ -70,6 +70,9 @@ app.use("/label-api", labelRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/uploads", express.static("uploads"));
 
+// API Integrations
+app.use("/api/integrations", require("./routes/integrationRoutes"));
+
 
 
 
