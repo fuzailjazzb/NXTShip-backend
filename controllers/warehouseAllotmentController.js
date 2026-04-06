@@ -121,7 +121,7 @@ exports.testWarehouse = async (req, res) => {
 
     console.log("🧪 Testing warehouse for:", pincode);
 
-    const allotment = await WarehouseAllocation.findOne({ userId });
+    const allotment = await WarehouseAllotment.findOne({ userId });
     const warehouses = await Warehouse.find({ userId });
 
     let selected = null;
