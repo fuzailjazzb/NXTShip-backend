@@ -82,6 +82,9 @@ app.use("/api/warehouse-allotment", warehouseAllotmentRoutes);
 // Webhook
 app.use("/webhook", require("./routes/webhookRoutes"));
 
+// user management
+app.use("/api/team", require("./routes/teamRoutes"));
+
 
 
 
