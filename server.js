@@ -89,6 +89,10 @@ app.use("/api/team", require("./routes/teamRoutes"));
 console.log("📦 Registering Catalogue Routes...");
 app.use("/api/catalogue", require("./routes/catalogueRoutes"));
 
+// RETURN QC
+console.log("📦 Registering RQC Routes...");
+app.use("/api/rqc", require("./routes/returnQcRoutes"));
+
 
 // MongoDB Connect
 mongoose
