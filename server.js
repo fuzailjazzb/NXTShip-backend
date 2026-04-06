@@ -13,6 +13,8 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const warehouseRoutes = require("./routes/warehouseRoutes");
 const labelRoutes = require("./routes/labelRoutes");
 const kycRoutes = require("./routes/kycRoutes");
+const warehouseAllotmentRoutes = require("./routes/warehouseAllotmentRoutes");
+
 
 const app = express();
 
@@ -72,6 +74,12 @@ app.use("/uploads", express.static("uploads"));
 
 // API Integrations
 app.use("/api/integrations", require("./routes/integrationRoutes"));
+
+// warehouse allotment
+app.use("/api/warehouse-allotment", warehouseAllotmentRoutes);
+
+// Webhook
+app.use("/webhook", require("./routes/webhookRoutes"));
 
 
 
