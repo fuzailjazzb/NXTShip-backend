@@ -85,8 +85,9 @@ app.use("/webhook", require("./routes/webhookRoutes"));
 // user management
 app.use("/api/team", require("./routes/teamRoutes"));
 
-
-
+// catalogue
+console.log("📦 Registering Catalogue Routes...");
+app.use("/api/catalogue", require("./routes/catalogueRoutes"));
 
 
 // MongoDB Connect
