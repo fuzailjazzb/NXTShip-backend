@@ -77,9 +77,11 @@ app.use("/api/integrations", require("./routes/integrationRoutes"));
 
 // warehouse allotment
 app.use("/api/warehouse-allotment", warehouseAllotmentRoutes);
+app.use("/api/warehouse-allotment", require("./routes/warehouseAllotmentRoutes"));
 
 // Webhook
 app.use("/webhook", require("./routes/webhookRoutes"));
+
 
 
 
