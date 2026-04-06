@@ -1,5 +1,5 @@
 const WarehouseAllotment = require("../models/WarehouseAllotmentModel");
-const Warehouse = require("../models/WarehouseModel");
+const Warehouse = require("../models/warehouse");
 const Integration = require("../models/IntegrationModel");
 
 /* ================= GET ================= */
