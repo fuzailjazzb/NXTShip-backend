@@ -114,6 +114,8 @@ exports.testWarehouse = async (req, res) => {
 
   try {
 
+    console.log("🧪 Testing warehouse allotment...");
+
     const userId = req.user.id;
     const { pincode } = req.body;
 
