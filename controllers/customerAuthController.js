@@ -2,6 +2,11 @@ const Customer = require("../models/customer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+global.otpStore = global.otpStore || {};
+
 
 exports.signupCustomer = async (req, res) => {
   try {
@@ -92,7 +97,7 @@ exports.loginCustomer = async (req, res) => {
     console.log("➡️ Request Body:", req.body);
     console.log("=======================================");
 
-    const { email, password } = req.body;
+    const { email, password, otp } = req.body;
 
     // ✅ Check missing fields
     if (!email || !password) {
@@ -147,6 +152,46 @@ exports.loginCustomer = async (req, res) => {
         message: "Invalid credentials",
       });
     }
+
+    if (!otp) {
+
+      // Generate OTP
+      const generatedOtp = Math.floor(
+        100000 + Math.random() * 900000
+      );
+
+      // Save OTP
+      global.otpStore[email] = generatedOtp;
+
+      // Send Email
+      await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: "Your Login OTP",
+        html: `
+      <h2>Your OTP is:</h2>
+      <h1>${generatedOtp}</h1>
+    `,
+      });
+
+      return res.json({
+        success: true,
+        otpRequired: true,
+        message: "OTP sent to email",
+      });
+    }
+
+
+    if (global.otpStore[email] != otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    // Remove OTP after verification
+    delete global.otpStore[email];
+
 
     // ✅ JWT Secret check
     console.log("🔐 JWT_SECRET Value:", process.env.JWT_SECRET);

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+const otpRoutes = require("./routes/otpRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
@@ -60,6 +61,7 @@ app.use("/api/customer/shipment", require("./routes/customerBookingRoutes"));
 app.use("/api/commission", require("./routes/commissionRoutes"));
 app.use("/api/customer", require("./routes/customerTrackingRoutes"));
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/otp", otpRoutes);
 
 
 // warehouse
