@@ -23,7 +23,7 @@ exports.sendOtp = async (req, res) => {
 
     // Send Email
     await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "No-Reply@NXTShip.in",
       to: email,
       subject: "Your Login OTP",
       html: `<h2>Your OTP is: ${otp}</h2>`,
