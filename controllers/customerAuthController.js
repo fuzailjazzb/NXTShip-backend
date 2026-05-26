@@ -165,7 +165,7 @@ exports.loginCustomer = async (req, res) => {
 
       // Send Email
       await resend.emails.send({
-        from: "No-Reply@NXTShip.in",
+        from: "No-Reply@nxtship.in",
         to: email,
         subject: "Your Login OTP",
         html: `
