@@ -233,7 +233,7 @@ exports.bookEkartShipment = async (req, res) => {
             );
             console.log("📈 Total Orders count increased for customer:", customerId);
         }
-        
+
 
         return res.status(201).json({
 
@@ -248,21 +248,30 @@ exports.bookEkartShipment = async (req, res) => {
     } catch (error) {
 
         console.log("❌ EKART FULL ERROR");
+        let exactErrorMessage = "Ekart booking failed. Please try again.";
 
         if (error.response) {
             console.log("📡 EKART API ERROR:", error.response.data);
             console.log("📡 STATUS:", error.response.status);
+            
+            // 🔴 YAHAN SMART LOGIC ADD KIYA HAI 🔴
+            // Ekart se aane wala exact error message (description) nikalna
+            if (error.response.data && error.response.data.description) {
+                exactErrorMessage = error.response.data.description;
+            } else if (error.response.data && error.response.data.message) {
+                exactErrorMessage = error.response.data.message;
+            }
         }
 
-        console.log("❌ MESSAGE:", error.message);
+        console.log("❌ MESSAGE:", exactErrorMessage);
 
-        return res.status(500).json({
+        // Ab frontend ko asli reason milega!
+        return res.status(400).json({
             success: false,
-            message: "Ekart booking failed"
+            message: exactErrorMessage 
         });
 
     }
-
 };
 
 
