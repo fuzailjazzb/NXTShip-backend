@@ -71,7 +71,18 @@ const shipmentSchema = new mongoose.Schema(
 
     courier: {
       type: String
-    }
+    },
+
+    // Schema ke andar kahin bhi add kar lein
+  refundStatus: {
+    type: String,
+    enum: ["Not Refunded", "Refunded"],
+    default: "Not Refunded"
+  },
+  refundedAmount: {
+    type: Number,
+    default: 0
+  }
 
 
   },
