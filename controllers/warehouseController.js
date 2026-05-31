@@ -34,27 +34,40 @@ exports.createWarehouse = async (req, res) => {
 
 
 exports.getWarehouses = async (req, res) => {
-
     try {
-
         console.log("Warehouse Api Hiteds");
         console.log("req.admin =>", req.admin);
         console.log("req.user =>", req.user);
 
-        const userId = req.admin._id || req.user.id;
+        // 1. Safe ID extraction (?. lagane se crash nahi hoga agar req.admin ya req.user empty ho)
+        const userId = req.admin?._id || req.user?.id;
+        
+        // 2. Admin check (Check karna ki token admin ka hai ya nahi)
+        const isAdmin = (req.admin && req.admin.email) || (req.user && req.user.email === 'admin@nxtships.in');
 
         console.log("userO=Id is", userId);
+        console.log("Is Admin Request?", !!isAdmin);
 
-        if (!userId) {
+        // 3. Agar normal user hai aur ID nahi mili, tabhi block karein
+        if (!isAdmin && !userId) {
             return res.status(500).json({
                 success: false,
                 message: "user not authenticated"
             });
         }
 
-        const warehouses = await Warehouse.find({ userId: userId });
+        let warehouses;
 
-        console.log("warehouses", warehouses);
+        // 4. SMART LOGIC: Admin hai toh sab dikhao, User hai toh uska filter lagao
+        if (isAdmin) {
+            // Admin ke liye bina kisi filter ke saare warehouses nikal lo
+            warehouses = await Warehouse.find({}).sort({ createdAt: -1 });
+        } else {
+            // Normal user ke liye Puraana wala logic (sirf uske warehouses)
+            warehouses = await Warehouse.find({ userId: userId });
+        }
+
+        console.log("Warehouses Found:", warehouses.length);
 
         res.json({
             success: true,
@@ -62,14 +75,12 @@ exports.getWarehouses = async (req, res) => {
             warehouses
         });
     } catch (err) {
-
         console.log("warehouse error", err);
         res.status(500).json({
             success: false,
             message: err.message
         });
     }
-
 };
 
 
