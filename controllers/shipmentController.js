@@ -73,6 +73,34 @@ exports.bookShipment = async (req, res) => {
     console.log("✅ Customer Found:", customer.email);
     console.log("💰 Wallet Balance:", customer.walletBalance);
 
+        /* =====================================================
+       STEP 1.5 — fetch Warehouse
+    ====================================================== */
+
+    console.log("Fetching Warehouse...");
+    console.log("Incoming Warehouse Id :", shipmentData.warehouseId);
+    console.log("Type Of Warehouse : ", typeof shipmentData.warehouseId);
+
+    if (!shipmentData.warehouseId) {
+      console.log("~~~~~~~~~ Warehouse Not Recieved From Frontend ~~~~~~~~~");
+    }
+
+    const warehouse = await Warehouse.findById(shipmentData.warehouseId);
+
+    console.log("Warehouse DB Result : ", warehouse);
+    console.log("Warehouse DB Response");
+
+    if (!warehouse) {
+      console.log("Warehouse not found in db");
+
+      return res.status(404).json({
+        success: true,
+        message: "Warehouse Not Found"
+      });
+    }
+
+    console.log("Warehouse Found", warehouse.name);
+
     /* =====================================================
        STEP 2 — SHIPPING CHARGE
     ====================================================== */
@@ -247,34 +275,6 @@ exports.bookShipment = async (req, res) => {
     await customer.save();
 
     console.log("After:", customer.walletBalance);
-
-    /* =====================================================
-       STEP 7.5 — fetch Warehouse
-    ====================================================== */
-
-    console.log("Fetching Warehouse...");
-    console.log("Incoming Warehouse Id :", shipmentData.warehouseId);
-    console.log("Type Of Warehouse : ", typeof shipmentData.warehouseId);
-
-    if (!shipmentData.warehouseId) {
-      console.log("~~~~~~~~~ Warehouse Not Recieved From Frontend ~~~~~~~~~");
-    }
-
-    const warehouse = await Warehouse.findById(shipmentData.warehouseId);
-
-    console.log("Warehouse DB Result : ", warehouse);
-    console.log("Warehouse DB Response");
-
-    if (!warehouse) {
-      console.log("Warehouse not found in db");
-
-      return res.status(404).json({
-        success: true,
-        message: "Warehouse Not Found"
-      });
-    }
-
-    console.log("Warehouse Found", warehouse.name);
 
     /* =====================================================
 STEP 8 — SAVE SHIPMENT
@@ -539,7 +539,7 @@ exports.checkPinSrvice = async (req, res) => {
       error: error.message,
     });
   }
-};
+}; 
 
 exports.refundShipment = async (req, res) => {
   try {
@@ -587,14 +587,15 @@ exports.refundShipment = async (req, res) => {
 
     // 5. Update Customer's Wallet Balance (Optional but recommended)
     
-    if (shipment.customerEmail) {
-      const customer = await Customer.findOne({ email: shipment.customerEmail });
-      if (customer) {
-        customer.walletBalance = (customer.walletBalance || 0) + parseFloat(refundAmount);
-        await customer.save();
-        console.log(`💰 Added ₹${refundAmount} to customer's wallet.`);
-      }
-    }
+    // Step 5 Update
+if (shipment.customerId) {
+  const customer = await Customer.findById(shipment.customerId);
+  if (customer) {
+    customer.walletBalance = (customer.walletBalance || 0) + parseFloat(refundAmount);
+    await customer.save();
+    console.log(`💰 Added ₹${refundAmount} to customer's wallet.`);
+  }
+}
 
     console.log("🎉 REFUND PROCESSED SUCCESSFULLY");
     console.log("=======================================");
