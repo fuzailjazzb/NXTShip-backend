@@ -175,17 +175,65 @@ exports.bookEkartShipment = async (req, res) => {
 
         console.log("💰 WALLET UPDATED:", customer.walletBalance);
 
+        // ==========================================
+        // 💾 SAVE SHIPMENT TO DATABASE (EKART)
+        // ==========================================
         const newShipment = await Shipment.create({
+            orderId: shipmentData.orderId,
+            orderNumber: shipmentData.orderNumber || null,
+            courier: "ekart",
+            waybill: waybill, // Jo Ekart se AWB aaya hai
+            status: "Booked",
+            paymentMode: shipmentData.paymentMode,
+            createdAt: new Date(),
+            customerId: shipmentData.customerId,
+            warehouseId: shipmentData.warehouseId,
 
-            ...shipmentData,
-            customerId,
-            waybill,
-            courier: "Ekart",
-            status: "Booked"
+            // 👇 YE MISSING THA (Delivery Details)
+            delivery: {
+                customerName: shipmentData.customerName,
+                phone: shipmentData.phone,
+                address: shipmentData.address,
+                city: shipmentData.city,
+                state: shipmentData.state,
+                pincode: shipmentData.pincode
+            },
 
+            // 👇 YE BHI MISSING THA (Pickup Details)
+            pickup: {
+                name: warehouse.name || "NXT Warehouse",
+                phone: warehouse.phone || "",
+                address: warehouse.address || "",
+                city: warehouse.city || "",
+                state: warehouse.state || "",
+                pincode: warehouse.pincode || ""
+            },
+
+            // 👇 PRODUCT DETAILS
+            product: {
+                productName: shipmentData.productName || "General Item",
+                quantity: shipmentData.quantity || 1,
+                weight: shipmentData.weight || 0.5,
+                orderValue: shipmentData.orderValue || shipmentData.amount || 0
+            },
+
+            seller: {
+                sellerName: process.env.EKART_SELLER_NAME || "NXT Ship",
+                gst: process.env.EKART_GST || "NA"
+            }
         });
 
         console.log("📦 SHIPMENT SAVED:", newShipment._id);
+
+        // 📈 Customer ke Total Orders ko 1 se badhana
+        if (customerId) {
+            await Customer.findByIdAndUpdate(
+                customerId,
+                { $inc: { totalOrders: 1 } }
+            );
+            console.log("📈 Total Orders count increased for customer:", customerId);
+        }
+        
 
         return res.status(201).json({
 
