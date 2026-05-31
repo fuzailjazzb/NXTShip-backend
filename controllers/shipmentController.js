@@ -35,21 +35,40 @@ exports.bookShipment = async (req, res) => {
 
     console.log("✅ Body Parsed Successfully");
 
-    const user = req.user;
+    /* ==================== NAYA SMART CODE ==================== */
+    let customerId = req.user?.id || req.user?._id;
+    const isAdmin = (req.admin && req.admin.email) || (req.user && req.user.email === 'admin@nxtships.in');
 
-    console.log("👤 req.user assigned:", req.user);
+    console.log("👤 Initial req.user:", req.user);
+    console.log("Is Admin Booking?", !!isAdmin);
 
-    if (!user || !user.id) {
-      console.log("❌ USER INVALID OR MISSING", user);
+    // Agar Admin book kar raha hai, toh uske paas ID nahi hogi. 
+    // Isliye hum selected warehouse se Customer/User ki ID nikalenge.
+    if (isAdmin && !customerId) {
+        console.log("🔎 Fetching Customer ID from selected Warehouse...");
+        const warehouse = await Warehouse.findById(shipmentData.warehouseId);
+        
+        if (warehouse) {
+            // Aapke DB schema me warehouse object ke andar user/customer ki id jis bhi key me save hoti hai, wo yahan likhein (mostly userId ya user hoti hai)
+            customerId = warehouse.userId || warehouse.user || warehouse.customerId;
+            console.log("✅ Extracted Customer ID from Warehouse:", customerId);
+        } else {
+            return res.status(404).json({ success: false, message: "Selected Warehouse not found in DB" });
+        }
+    }
+
+    // Final Check: Agar kisi bhi tareeqe se ID nahi mili toh block kardo
+    if (!customerId) {
+      console.log("❌ USER INVALID OR MISSING (Cannot find customer to bill)");
       return res.status(401).json({
         success: false,
         message: "unauthorized usersss"
       });
     }
 
-    shipmentData.customerId = user.id;
-
-    console.log("✅ CustomerId attached:", shipmentData.customerId);
+    shipmentData.customerId = customerId;
+    console.log("✅ Final CustomerId attached to shipment:", shipmentData.customerId);
+    /* ========================================================= */
 
     /* =====================================================
        STEP 1 — CUSTOMER FETCH
