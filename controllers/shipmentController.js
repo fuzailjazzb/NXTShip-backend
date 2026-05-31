@@ -254,31 +254,35 @@ exports.bookShipment = async (req, res) => {
     );
 
     console.log("✅ Delhivery Response:", response.data);
-    console.log("Packages : ", response.data?.packages);
-    console.log("First Package : ", response.data?.packages?.[0]);
+    const firstPackage = response.data?.packages?.[0];
+    
+    console.log("First Package : ", firstPackage);
 
-
-    if (response.data?.packages?.[0]?.serviceable === false) {
+    if (firstPackage?.serviceable === false) {
       return res.status(400).json({
         success: false,
         message: "Delhivery not serviceable for this pin code"
       });
     };
 
-    const waybill =
-      response.data?.packages?.[0]?.waybill ||
-      response.data?.packages?.[0]?.waybill_number;
-
-
+    const waybill = firstPackage?.waybill || firstPackage?.waybill_number;
 
     console.log("📦 Waybill Extracted:", waybill);
 
-
+    // 🔴 NAYA SMART ERROR HANDLING 🔴
     if (!waybill) {
       console.log("❌ No Waybill Received");
+      
+      // Delhivery ke logs se exact reason nikalna (remarks array se)
+      let exactReason = "Booking failed: No waybill received from courier.";
+      
+      if (firstPackage?.remarks && firstPackage.remarks.length > 0) {
+          exactReason = firstPackage.remarks[0]; // Ye apka exact error catch karega
+      }
+
       return res.status(400).json({
         success: false,
-        message: "No waybill received",
+        message: exactReason, // Frontend ko direct reason bhejein
       });
     }
 
