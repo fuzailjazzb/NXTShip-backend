@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const courierEngineController = require("../controllers/courierEngineController");
-const { bookShipment, getAllShipments, trackShipment, delhiveryTracking, checkPinSrvice, cancelShipment } = require("../controllers/shipmentController");
+const { bookShipment, getAllShipments, trackShipment, delhiveryTracking, checkPinSrvice, cancelShipment, refundShipment } = require("../controllers/shipmentController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
@@ -29,5 +29,8 @@ router.get("/pin/:pincode", checkPinSrvice);
 
 //cancel shipment route
 router.post("/cancel/:id", authMiddleware, cancelShipment);
+
+// refund shipment route
+router.post("/refund/:id", authMiddleware, refundShipment);
 
 module.exports = router;

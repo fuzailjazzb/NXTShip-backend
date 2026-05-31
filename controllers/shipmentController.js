@@ -541,3 +541,80 @@ exports.checkPinSrvice = async (req, res) => {
   }
 };
 
+exports.refundShipment = async (req, res) => {
+  try {
+    console.log("=======================================");
+    console.log("✅ REFUND API HIT");
+    
+    const shipmentId = req.params.id;
+    const { refundAmount } = req.body;
+
+    console.log(`➡️ Shipment ID: ${shipmentId}, Refund Amount: ₹${refundAmount}`);
+
+    // 1. Check if Amount is valid
+    if (!refundAmount || isNaN(refundAmount) || refundAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid refund amount provided",
+      });
+    }
+
+    // 2. Find the Shipment
+    const shipment = await Shipment.findById(shipmentId);
+    
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found",
+      });
+    }
+
+    // 3. Check if already refunded to prevent double refund
+    if (shipment.refundStatus === "Refunded") {
+      return res.status(400).json({
+        success: false,
+        message: "This shipment has already been refunded.",
+      });
+    }
+
+    // 4. Update Shipment Data
+    shipment.refundStatus = "Refunded";
+    shipment.refundedAmount = parseFloat(refundAmount);
+    // Agar refund ke baad status change karna ho toh uncomment karein:
+    shipment.status = "Cancelled"; 
+    
+    await shipment.save();
+
+    // 5. Update Customer's Wallet Balance (Optional but recommended)
+    
+    if (shipment.customerEmail) {
+      const customer = await Customer.findOne({ email: shipment.customerEmail });
+      if (customer) {
+        customer.walletBalance = (customer.walletBalance || 0) + parseFloat(refundAmount);
+        await customer.save();
+        console.log(`💰 Added ₹${refundAmount} to customer's wallet.`);
+      }
+    }
+
+    console.log("🎉 REFUND PROCESSED SUCCESSFULLY");
+    console.log("=======================================");
+
+    return res.status(200).json({
+      success: true,
+      message: `Refund of ₹${refundAmount} processed successfully`,
+      shipment
+    });
+
+  } catch (err) {
+    console.log("=======================================");
+    console.error("🔥 REFUND ERROR OCCURRED");
+    console.error(err);
+    console.log("=======================================");
+
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: err.message,
+    });
+  }
+};
