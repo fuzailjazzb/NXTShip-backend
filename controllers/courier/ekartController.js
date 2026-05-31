@@ -98,7 +98,6 @@ exports.bookEkartShipment = async (req, res) => {
         console.log("📦 BUILDING EKART PAYLOAD");
 
         const payload = {
-
             seller_name: process.env.EKART_SELLER_NAME,
             seller_address: process.env.EKART_SELLER_ADDRESS,
             seller_gst_tin: process.env.EKART_GST,
@@ -108,7 +107,13 @@ exports.bookEkartShipment = async (req, res) => {
             invoice_date: new Date().toISOString().split("T")[0],
 
             consignee_name: shipmentData.customerName,
-            consignee_alternate_phone: shipmentData.phone,
+            
+            // 🔴 YAHAN UPDATE KIYA HAI 🔴
+            // Agar alternate phone hai aur primary phone se alag hai, tabhi bhejo, warna blank ("") bhej do.
+            consignee_alternate_phone: (shipmentData.alternatePhone && shipmentData.alternatePhone !== shipmentData.phone) 
+                                       ? shipmentData.alternatePhone 
+                                       : "",
+            
             consignee_gst_amount: 0,
 
             products_desc: shipmentData.product || "Parcel",
@@ -141,7 +146,6 @@ exports.bookEkartShipment = async (req, res) => {
                 phone: shipmentData.phone ? parseInt(shipmentData.phone) : 9553281751,
                 pin: shipmentData.pincode ? parseInt(shipmentData.pincode) : 500055
             }
-
         };
 
         console.log("📦 EKART PAYLOAD:", JSON.stringify(payload, null, 2));
